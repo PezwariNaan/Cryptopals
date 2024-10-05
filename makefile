@@ -4,8 +4,11 @@ CC = g++
 # Directories
 TARGET_DIR = ../target/
 
+# Ignored Files
+IGNORED = encoding.cpp encrypting.cpp
+
 # Automatically find all .cpp files except encoding.cpp
-SOURCES = $(filter-out encoding.cpp, $(wildcard *.cpp))
+SOURCES = $(filter-out $(IGNORED), $(wildcard *.cpp))
 
 # Always include encoding.cpp
 COMMON_SOURCE = encoding.cpp
@@ -23,7 +26,7 @@ all: $(TARGETS)
 
 # Rule to build each executable
 $(TARGET_DIR)%: %.cpp $(COMMON_SOURCE) | $(TARGET_DIR)
-	$(CC) $(CFLAGS) $< $(COMMON_SOURCE) -o $@; $@
+	$(CC) $(CFLAGS) $(COMMON_SOURCE) $< -o $@; $@
 
 # Create necessary directories
 $(TARGET_DIR):
