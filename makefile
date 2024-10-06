@@ -5,7 +5,7 @@ CC = g++
 TARGET_DIR = ../target/
 
 # Ignored Files
-IGNORED = encoding.cpp encrypting.cpp
+IGNORED = encoding.cpp
 
 # Automatically find all .cpp files except encoding.cpp
 SOURCES = $(filter-out $(IGNORED), $(wildcard *.cpp))
