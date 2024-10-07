@@ -16,4 +16,5 @@ clean:
 	rm -f $(TARGET_DIR)/*
 
 # Phony targets
-.PHONY: all clean
+.PHONY:
+	clean
