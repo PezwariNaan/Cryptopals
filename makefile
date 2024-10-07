@@ -13,7 +13,7 @@ challenge%: challenge%.cpp
 
 # Clean target
 clean:
-	rm -f $(TARGET_DIR)/*
+	rm $(TARGET_DIR)*
 
 # Phony targets
 .PHONY:
