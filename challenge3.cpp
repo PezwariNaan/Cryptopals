@@ -7,6 +7,10 @@ int main(void) {
     std::vector cipher_bytes = cp::hex_decode(cipher_text);
     result results = attack_single_byte_xor(cipher_bytes);
 
+    
+    std::cout << "Cipher_Text: \n";
+    print_array(cipher_bytes);
+    std::cout << "\n\n";
     std::cout << "Key: " << results.key << "\n\nPlain Text:\n";
     print_array(results.decrypted_bytes);
     std::cout << std::endl;
