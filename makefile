@@ -6,8 +6,8 @@ TARGET_DIR = ../target/
 # Ignored Files
 DEPS = ./Deps/encoding.cpp ./Deps/encrypting.cpp
 
-# Challenge 3 Compiler Instructions
-challenge3: challenge3.cpp
+# Challenge [4-6] Compiler Instructions
+challenge%: challenge%.cpp
 	$(CC) $(CFLAGS) $(DEPS) $^ -o $(TARGET_DIR)$@
 	../target/$@
 
