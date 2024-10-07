@@ -24,6 +24,10 @@ void print_array(std::vector<uint8_t> array) {
 
 std::string read_file(const std::string &file_name){
     std::ifstream file(file_name);
+    if (!file.is_open()) {
+        std::cerr << "Error Opening " << file_name << std::endl;
+    }
+
     std::stringstream buffer;
     
     buffer << file.rdbuf();
@@ -32,6 +36,9 @@ std::string read_file(const std::string &file_name){
 
 std::map<int, std::string> read_lines(const std::string file_name) {
     std::ifstream file(file_name);
+    if (!file.is_open()) {
+        std::cerr << "Error Opening " <<file_name << std::endl;
+    }
     std::map<int, std::string> lines; // line_number, line_content
     int line_number = 1;
     std::string line_content;
