@@ -40,35 +40,43 @@ std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 }
 
 std::vector<uint8_t> cp::base64_decode(const std::string &input) {
-	const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::vector<uint8_t> byte_array;
 
-	std::vector<uint8_t> byte_array;
-	int input_len = input.length();
-	
-	for (int i = 0; i < input_len; i += 4) {
-		// Handle padding '='
-		int first_char_index = b64_lookup_table.find(input[i]);
-		int second_char_index = b64_lookup_table.find(input[i + 1]);
-		int third_char_index = (input[i + 2] == '=') ? 0 : b64_lookup_table.find(input[i + 2]);
-		int fourth_char_index = (input[i + 3] == '=') ? 0 : b64_lookup_table.find(input[i + 3]);
-		
-		// Decode
-		uint8_t byte1 = (first_char_index << 2) | (second_char_index >> 4);
-		byte_array.push_back(byte1);
-		
-		if (input[i + 2] != '=') {
-			uint8_t byte2 = ((second_char_index & 0x0F) << 4) | (third_char_index >> 2);
-			byte_array.push_back(byte2);
-		}
-		
-		if (input[i + 3] != '=') {
-			uint8_t byte3 = ((third_char_index & 0x03) << 6) | fourth_char_index;
-			byte_array.push_back(byte3);
-		}
-	}
-	
-	return byte_array;
+    // Precompute a reverse lookup table for Base64 characters
+    std::vector<int> lookup_table(256, -1);
+    for (int i = 0; i < b64_lookup_table.size(); i++) {
+        lookup_table[b64_lookup_table[i]] = i;
+    }
+
+    int input_len = input.length();
+    
+    // Process input in blocks of 4 Base64 characters
+    for (int i = 0; i < input_len; i += 4) {
+        // Check for padding and make sure we don't go out of bounds
+        int first_char_index  = lookup_table[static_cast<uint8_t>(input[i])];
+        int second_char_index = lookup_table[static_cast<uint8_t>(input[i + 1])];
+        int third_char_index  = (i + 2 < input_len && input[i + 2] != '=') ? lookup_table[static_cast<uint8_t>(input[i + 2])] : 0;
+        int fourth_char_index = (i + 3 < input_len && input[i + 3] != '=') ? lookup_table[static_cast<uint8_t>(input[i + 3])] : 0;
+
+        // Decode
+        uint8_t byte1 = (first_char_index << 2) | (second_char_index >> 4);
+        byte_array.push_back(byte1);
+        
+        if (i + 2 < input_len && input[i + 2] != '=') {
+            uint8_t byte2 = ((second_char_index & 0x0F) << 4) | (third_char_index >> 2);
+            byte_array.push_back(byte2);
+        }
+        
+        if (i + 3 < input_len && input[i + 3] != '=') {
+            uint8_t byte3 = ((third_char_index & 0x03) << 6) | fourth_char_index;
+            byte_array.push_back(byte3);
+        }
+    }
+    
+    return byte_array;
 }
+
 
 std::vector<uint8_t> cp::hex_decode(const std::string &input) {
 	std::vector<uint8_t> byte_array;
