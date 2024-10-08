@@ -9,11 +9,11 @@
 #include <cstdint>
 #include <memory>
 
-typedef struct {
+struct result {
     std::vector<uint8_t> decrypted_bytes;
     uint8_t key;
     int score = 0;
-} result;
+};
 
 namespace cp {
     std::vector<uint8_t> fixed_xor(std::vector<uint8_t> &start, std::vector<uint8_t> &key);
