@@ -55,39 +55,37 @@ int main(void) {
 
     int keysize = 2;
     const int MAX_KEYSIZE = 40;
-
     std::map<float, int> keysize_scores; // score, keysize
 
-    // Get normalised edit distance between first 4 blocks of KEYSIZE length
-
+    // Get normalized edit distance between blocks of KEYSIZE length
     for (; keysize < MAX_KEYSIZE; keysize++) {
-        std::vector<uint8_t> first_block;
-        std::vector<uint8_t> second_block;
-        std::vector<uint8_t> third_block;
-        std::vector<uint8_t> fourth_block;
+        float keysize_score = 0;
+        std::vector<std::vector<uint8_t>> block_vector;
 
-        for (int i = 0; i < keysize; i++) {
-            first_block.push_back (cipher_bytes[i]);
-            second_block.push_back(cipher_bytes[i + (keysize * 1)]);
-            third_block.push_back (cipher_bytes[i + (keysize * 2)]);
-            fourth_block.push_back(cipher_bytes[i + (keysize * 3)]);
+        // Gather blocks of size 'keysize'
+        for (int i = 0; i < cipher_bytes.size() / keysize; i++) {  // Use the first 5 blocks
+            std::vector<uint8_t> block(cipher_bytes.begin() + i * keysize, 
+                                    cipher_bytes.begin() + (i + 1) * keysize);
+            block_vector.push_back(block);
         }
 
-        float normalised_hamming_distance1 = get_hamming_distance(first_block, second_block) / keysize;
-        float normalised_hamming_distance2 = get_hamming_distance(second_block, third_block)  / keysize;
-        float normalised_hamming_distance3 = get_hamming_distance(third_block, fourth_block) / keysize;
-        float normalised_hamming_distance4 = get_hamming_distance(second_block, third_block) / keysize;
-        float normalised_hamming_distance5 = get_hamming_distance(second_block, fourth_block)/ keysize;
-        float normalised_hamming_distance6 = get_hamming_distance(third_block, fourth_block) / keysize;
+        // Calculate pairwise Hamming distances
+        int comparisons = 0;
+        for (size_t i = 0; i < block_vector.size(); i++) {
+            for (size_t j = i + 1; j < block_vector.size(); j++) {
+                int hamming_distance = get_hamming_distance(block_vector[i], block_vector[j]);
+                keysize_score += hamming_distance / static_cast<float>(keysize);  // Normalize by keysize
+                comparisons++;
+            }
+        }
 
-        float average_hamming_distance = (normalised_hamming_distance1  + \
-                                          normalised_hamming_distance2  + \
-                                          normalised_hamming_distance3  + \
-                                          normalised_hamming_distance4  + \
-                                          normalised_hamming_distance5  + \
-                                          normalised_hamming_distance6) / 6.0f;
-                                        
-        keysize_scores.insert({average_hamming_distance, keysize});
+        // Average the score over the number of comparisons
+        keysize_score /= comparisons;
+
+        // Store the score for this keysize
+        keysize_scores.insert({keysize_score, keysize});
+
+        std::cout << "Keysize: " << keysize << " Score: " << keysize_score << std::endl;
     }    
     
     // Select keysize with lowest edit distance 
