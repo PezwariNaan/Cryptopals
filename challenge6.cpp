@@ -41,31 +41,19 @@ int test(std::vector<uint8_t> first, std::vector<uint8_t> second) {
     return 0;
 }
 
-int main(void) {
-    std::string first  = "this is a test";
-    std::string second = "wokka wokka!!!";
-    std::vector<uint8_t> first_bytes(first.begin(), first.end());
-    std::vector<uint8_t> second_bytes(second.begin(), second.end());
-
-    if (test(first_bytes, second_bytes) < 0) return 1;
-
-    std::string filename = "./Texts/challenge6.txt";
-    std::string cipher_text = read_file(filename);
-    std::vector<uint8_t> cipher_bytes = cp::base64_decode(cipher_text);
-
+std::map<float, int> get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t> cipher_bytes) {
+    std::map<float, int> keysize_scores;
     int keysize = 2;
-    const int MAX_KEYSIZE = 40;
-    std::map<float, int> keysize_scores; // score, keysize
-
     // Get normalized edit distance between blocks of KEYSIZE length
     for (; keysize < MAX_KEYSIZE; keysize++) {
         float keysize_score = 0;
         std::vector<std::vector<uint8_t>> block_vector;
 
         // Gather blocks of size 'keysize'
-        for (int i = 0; i < cipher_bytes.size() / keysize; i++) {  // Use the first 5 blocks
+        for (int i = 0; i < cipher_bytes.size() / keysize; i++) {  // Use the as many blocks as possible
             std::vector<uint8_t> block(cipher_bytes.begin() + i * keysize, 
                                     cipher_bytes.begin() + (i + 1) * keysize);
+            
             block_vector.push_back(block);
         }
 
@@ -84,12 +72,28 @@ int main(void) {
 
         // Store the score for this keysize
         keysize_scores.insert({keysize_score, keysize});
+    }
+        //std::cout << "Keysize: " << keysize << " Score: " << keysize_score << std::endl;
+    return keysize_scores;
+}
 
-        std::cout << "Keysize: " << keysize << " Score: " << keysize_score << std::endl;
-    }    
+int main(void) {
+    std::string first  = "this is a test";
+    std::string second = "wokka wokka!!!";
+    std::vector<uint8_t> first_bytes(first.begin(), first.end());
+    std::vector<uint8_t> second_bytes(second.begin(), second.end());
+
+    if (test(first_bytes, second_bytes) < 0) return 1;
+
+    std::string filename = "./Texts/challenge6.txt";
+    std::string cipher_text = read_file(filename);
+    std::vector<uint8_t> cipher_bytes = cp::base64_decode(cipher_text);
+
+    int keysize = 2;
+    const int MAX_KEYSIZE = 40;
+    std::map<float, int> keysize_scores = get_keysize(MAX_KEYSIZE, cipher_bytes); // score, keysize
     
     // Select keysize with lowest edit distance 
-
     int likely_keysize = keysize_scores.begin()->second;
     std::cout << "Keysize: " << likely_keysize << "\n";
 
@@ -100,8 +104,8 @@ int main(void) {
     // Transpose the blocks as they are populated 
     for (int j = 0; j < likely_keysize; j++) {
         std::vector<uint8_t> block;
-        for (size_t i = 0; i < cipher_bytes.size(); i += likely_keysize) {
-            block.push_back(cipher_bytes[i + j]);        
+        for (size_t i = j; i < cipher_bytes.size(); i += likely_keysize) {
+            block.push_back(cipher_bytes[i]);
         }
         keysize_blocks.insert({count, block});
         count++;

@@ -18,7 +18,7 @@ std::vector<uint8_t> cp::fixed_xor(std::vector<uint8_t> &start, std::vector<uint
 // --------------------------------------------------------------------
 // These blocks of code are responsible for breaking XOR 'vignere' ciphers
 
-int cp::character_lookup(std::vector<uint8_t> &byte_array, int &key) {
+int cp::character_lookup(std::vector<uint8_t> &byte_array, uint8_t &key) {
     const std::string common_string = "ETAOIN SHRDLU";
     std::vector<uint8_t> common_characters(common_string.begin(), common_string.end());
     int score = 0;
@@ -42,11 +42,10 @@ int cp::character_lookup(std::vector<uint8_t> &byte_array, int &key) {
 }
 
 std::map<int, uint8_t> cp::get_scores(std::vector<uint8_t> &byte_array) {
-
     std::map<int, uint8_t> key_score_map; // <Score, Key>
 
     // Score every key against the decoded cipher text
-    for (int key = 0; key < 255; key++) {
+    for (uint8_t key = 0; key < 255; key++) {
         int score = cp::character_lookup(byte_array, key);
         key_score_map.insert({score, key});
     }
@@ -65,11 +64,12 @@ result cp::attack_single_byte_xor(std::vector<uint8_t> &cipher_bytes) {
     result results;
     std::map<int, uint8_t> key_score_map = get_scores(cipher_bytes);
     
+    // Get the highest scoring key
     auto iter = key_score_map.begin();
     auto end = key_score_map.end(); 
     auto key = std::prev(end)->second;
     auto score = std::prev(end) ->first;
-    
+
     results.decrypted_bytes = cp::single_byte_xor(cipher_bytes, key);
     results.key = key;
     results.score = score;
