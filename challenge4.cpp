@@ -1,7 +1,6 @@
 #include "utility.hpp"
 #include "encrypting.hpp"
 #include "encoding.hpp"
-#include <memory>
 
 int main(void) {
     const std::string file_name = "./Texts/challenge4.txt";

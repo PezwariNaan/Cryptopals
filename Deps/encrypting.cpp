@@ -1,7 +1,7 @@
 #include "encrypting.hpp"
 
 // Encryption
-std::vector<uint8_t> cp::fixed_xor(std::vector<uint8_t> start, std::vector<uint8_t> key) {
+std::vector<uint8_t> cp::fixed_xor(std::vector<uint8_t> &start, std::vector<uint8_t> &key) {
     std::vector<uint8_t> result;
 
     if (key.size() != start.size()) {
@@ -18,7 +18,7 @@ std::vector<uint8_t> cp::fixed_xor(std::vector<uint8_t> start, std::vector<uint8
 // --------------------------------------------------------------------
 // These blocks of code are responsible for breaking XOR 'vignere' ciphers
 
-int cp::character_lookup(std::vector<uint8_t> byte_array, int key) {
+int cp::character_lookup(std::vector<uint8_t> &byte_array, int &key) {
     const std::string common_string = "ETAOIN SHRDLU";
     std::vector<uint8_t> common_characters(common_string.begin(), common_string.end());
     int score = 0;
@@ -41,7 +41,7 @@ int cp::character_lookup(std::vector<uint8_t> byte_array, int key) {
     return score;
 }
 
-std::map<int, uint8_t> cp::get_scores(std::vector<uint8_t> byte_array) {
+std::map<int, uint8_t> cp::get_scores(std::vector<uint8_t> &byte_array) {
 
     std::map<int, uint8_t> key_score_map; // <Score, Key>
 
@@ -54,14 +54,14 @@ std::map<int, uint8_t> cp::get_scores(std::vector<uint8_t> byte_array) {
     return key_score_map;
 }
 
-std::vector<uint8_t> cp::single_byte_xor(std::vector<uint8_t> byte_array, uint8_t key) {
+std::vector<uint8_t> cp::single_byte_xor(std::vector<uint8_t> &byte_array, uint8_t &key) {
     std::vector<uint8_t> result;
     for (size_t i = 0; i < byte_array.size(); i++)
         result.push_back(byte_array[i] ^ key);
     return result;
 }
 
-result cp::attack_single_byte_xor(std::vector<uint8_t> cipher_bytes) {
+result cp::attack_single_byte_xor(std::vector<uint8_t> &cipher_bytes) {
     result results;
     std::map<int, uint8_t> key_score_map = get_scores(cipher_bytes);
     
@@ -77,3 +77,14 @@ result cp::attack_single_byte_xor(std::vector<uint8_t> cipher_bytes) {
     return results;
 }
 // ----------------------------------------------------------------------
+
+std::vector<uint8_t> cp::repeating_key_xor(std::vector<uint8_t> &plain_bytes, std::vector<uint8_t> &key_bytes) {
+    std::vector<uint8_t> cipher_bytes;
+
+    for (int i = 0; i < plain_bytes.size(); i++) {
+        uint8_t xored_byte = plain_bytes[i] ^ key_bytes[i % key_bytes.size()];
+        cipher_bytes.push_back(xored_byte);
+    }
+
+    return cipher_bytes;
+}
