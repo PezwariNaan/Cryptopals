@@ -85,9 +85,8 @@ int main(void) {
 
     if (test(first_bytes, second_bytes) < 0) return 1;
 
-    std::string filename = "./Texts/challenge6.txt";
-    std::string cipher_text = read_file(filename);
-    std::vector<uint8_t> cipher_bytes = cp::base64_decode(cipher_text);
+    const std::string filename = "./Texts/challenge6_decoded.txt";
+    std::vector<uint8_t> cipher_bytes = read_file_bytes(filename);
 
     int keysize = 2;
     const int MAX_KEYSIZE = 40;
@@ -111,15 +110,6 @@ int main(void) {
         count++;
     }
 
-    // Debug ---------------------------------------------
-    std::vector<uint8_t> debug_block = keysize_blocks[1];
-    result debug_result = cp::attack_single_byte_xor(debug_block);
-    std::cout << "Key :" << debug_result.key << "\n"; 
-    std::cout << "Deciphered: \n";
-    print_array(debug_result.decrypted_bytes);
-    std::cout << std::endl;
-    return 0;
-    // End Debug -----------------------------------------
     auto element = keysize_blocks.begin();
     auto end = keysize_blocks.end();
     
@@ -130,13 +120,17 @@ int main(void) {
         result_vector.push_back(results);
     }
 
+    std::vector<uint8_t> likely_key;
+    std::cout << "Key: " ;
     for (size_t i = 0; i < result_vector.size(); i++) {
-        std::cout << "Key: " <<  result_vector[i].key << "\n";
-        print_array(result_vector[i].decrypted_bytes);
-        std::cout << "\n\n";
+        likely_key.push_back(result_vector[i].key);
+        std::cout << result_vector[i].key;
     }
-    
+    std::cout << std::endl;
 
+    std::cout << "Decrypted Bytes: \n";
+    std::vector<uint8_t> decrypted_bytes = cp::repeating_key_xor(cipher_bytes, likely_key);
+    print_array(decrypted_bytes);
     std::cout << std::endl; 
 
     return 0;
