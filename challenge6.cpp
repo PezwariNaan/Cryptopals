@@ -101,7 +101,7 @@ int main(void) {
     std::map<int, std::vector<uint8_t>> keysize_blocks;
     int count = 1;
     
-    // Transpose the blocks as they are populated 
+    // Transpose and propulate 'keysize_blocks' with 'block'
     for (int j = 0; j < likely_keysize; j++) {
         std::vector<uint8_t> block;
         for (size_t i = j; i < cipher_bytes.size(); i += likely_keysize) {
@@ -111,6 +111,15 @@ int main(void) {
         count++;
     }
 
+    // Debug ---------------------------------------------
+    std::vector<uint8_t> debug_block = keysize_blocks[1];
+    result debug_result = cp::attack_single_byte_xor(debug_block);
+    std::cout << "Key :" << debug_result.key << "\n"; 
+    std::cout << "Deciphered: \n";
+    print_array(debug_result.decrypted_bytes);
+    std::cout << std::endl;
+    return 0;
+    // End Debug -----------------------------------------
     auto element = keysize_blocks.begin();
     auto end = keysize_blocks.end();
     
@@ -122,8 +131,11 @@ int main(void) {
     }
 
     for (size_t i = 0; i < result_vector.size(); i++) {
-        std::cout << result_vector[i].key;
+        std::cout << "Key: " <<  result_vector[i].key << "\n";
+        print_array(result_vector[i].decrypted_bytes);
+        std::cout << "\n\n";
     }
+    
 
     std::cout << std::endl; 
 
