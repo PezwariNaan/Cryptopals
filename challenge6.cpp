@@ -77,6 +77,10 @@ std::map<float, int> get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t> cip
     return keysize_scores;
 }
 
+// TODO: Create attack_repeating_key_xor function and move code breaking logic from main to function
+
+
+
 int main(void) {
     std::string first  = "this is a test";
     std::string second = "wokka wokka!!!";
