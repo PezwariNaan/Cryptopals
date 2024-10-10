@@ -43,16 +43,16 @@ int test(std::vector<uint8_t> first, std::vector<uint8_t> second) {
 
 std::map<float, int> get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t> cipher_bytes) {
     std::map<float, int> keysize_scores;
-    int keysize = 2;
+    int likely_keysize = 2;
     // Get normalized edit distance between blocks of KEYSIZE length
-    for (; keysize < MAX_KEYSIZE; keysize++) {
+    for (; likely_keysize < MAX_KEYSIZE; likely_keysize++) {
         float keysize_score = 0;
         std::vector<std::vector<uint8_t>> block_vector;
 
-        // Gather blocks of size 'keysize'
-        for (int i = 0; i < cipher_bytes.size() / keysize; i++) {  // Use the as many blocks as possible
-            std::vector<uint8_t> block(cipher_bytes.begin() + i * keysize, 
-                                    cipher_bytes.begin() + (i + 1) * keysize);
+        // Gather blocks of size 'likely_keysize'
+        for (int i = 0; i < cipher_bytes.size() / likely_keysize; i++) {  // Use the as many blocks as possible
+            std::vector<uint8_t> block(cipher_bytes.begin() + i * likely_keysize, 
+                                    cipher_bytes.begin() + (i + 1) * likely_keysize);
             
             block_vector.push_back(block);
         }
@@ -62,7 +62,7 @@ std::map<float, int> get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t> cip
         for (size_t i = 0; i < block_vector.size(); i++) {
             for (size_t j = i + 1; j < block_vector.size(); j++) {
                 int hamming_distance = get_hamming_distance(block_vector[i], block_vector[j]);
-                keysize_score += hamming_distance / static_cast<float>(keysize);  // Normalize by keysize
+                keysize_score += hamming_distance / static_cast<float>(likely_keysize);  // Normalize by likely_keysize
                 comparisons++;
             }
         }
@@ -70,49 +70,43 @@ std::map<float, int> get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t> cip
         // Average the score over the number of comparisons
         keysize_score /= comparisons;
 
-        // Store the score for this keysize
-        keysize_scores.insert({keysize_score, keysize});
+        // Store the score for this likely_keysize
+        keysize_scores.insert({keysize_score, likely_keysize});
     }
-        //std::cout << "Keysize: " << keysize << " Score: " << keysize_score << std::endl;
+        //std::cout << "Keysize: " << likely_keysize << " Score: " << keysize_score << std::endl;
     return keysize_scores;
 }
 
 // TODO: Create attack_repeating_key_xor function and move code breaking logic from main to function
 
-
-
-int main(void) {
-    std::string first  = "this is a test";
-    std::string second = "wokka wokka!!!";
-    std::vector<uint8_t> first_bytes(first.begin(), first.end());
-    std::vector<uint8_t> second_bytes(second.begin(), second.end());
-
-    if (test(first_bytes, second_bytes) < 0) return 1;
-
-    const std::string filename = "./Texts/challenge6_decoded.txt";
-    std::vector<uint8_t> cipher_bytes = read_file_bytes(filename);
-
-    int keysize = 2;
-    const int MAX_KEYSIZE = 40;
-    std::map<float, int> keysize_scores = get_keysize(MAX_KEYSIZE, cipher_bytes); // score, keysize
-    
-    // Select keysize with lowest edit distance 
-    int likely_keysize = keysize_scores.begin()->second;
-    std::cout << "Keysize: " << likely_keysize << "\n";
-
-    // Break cipher_bytes into keysize length blocks 
+std::map<int, std::vector<uint8_t>> make_blocks(int keysize, std::vector<uint8_t> &cipher_bytes) {
     std::map<int, std::vector<uint8_t>> keysize_blocks;
     int count = 1;
     
     // Transpose and propulate 'keysize_blocks' with 'block'
-    for (int j = 0; j < likely_keysize; j++) {
+    for (int j = 0; j < keysize; j++) {
         std::vector<uint8_t> block;
-        for (size_t i = j; i < cipher_bytes.size(); i += likely_keysize) {
+        for (size_t i = j; i < cipher_bytes.size(); i += keysize) {
             block.push_back(cipher_bytes[i]);
         }
         keysize_blocks.insert({count, block});
         count++;
     }
+    
+    return keysize_blocks;
+}
+
+void attack_repeating_key_xor(std::vector<uint8_t> &cipher_bytes) {
+    int keysize = 2;
+    const int MAX_KEYSIZE = 40;
+    std::map<float, int> keysize_scores = get_keysize(MAX_KEYSIZE, cipher_bytes); // score, likely_keysize
+    
+    // Select likely_keysize with lowest edit distance 
+    int likely_keysize = keysize_scores.begin()->second;
+    std::cout << "Keysize: " << likely_keysize << "\n";
+
+    // Break cipher_bytes into likely_keysize length blocks 
+    std::map<int, std::vector<uint8_t>> keysize_blocks = make_blocks(likely_keysize, cipher_bytes); // index, block
 
     auto element = keysize_blocks.begin();
     auto end = keysize_blocks.end();
@@ -136,6 +130,21 @@ int main(void) {
     std::vector<uint8_t> decrypted_bytes = cp::repeating_key_xor(cipher_bytes, likely_key);
     print_array(decrypted_bytes);
     std::cout << std::endl; 
+
+}
+
+int main(void) {
+    std::string first  = "this is a test";
+    std::string second = "wokka wokka!!!";
+    std::vector<uint8_t> first_bytes(first.begin(), first.end());
+    std::vector<uint8_t> second_bytes(second.begin(), second.end());
+
+    if (test(first_bytes, second_bytes) < 0) return 1;
+
+    const std::string filename = "./Texts/challenge6_decoded.txt";
+    std::vector<uint8_t> cipher_bytes = read_file_bytes(filename);
+
+    attack_repeating_key_xor(cipher_bytes);
 
     return 0;
 }
