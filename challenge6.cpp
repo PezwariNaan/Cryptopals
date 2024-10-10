@@ -96,7 +96,7 @@ std::map<int, std::vector<uint8_t>> make_blocks(int keysize, std::vector<uint8_t
     return keysize_blocks;
 }
 
-void attack_repeating_key_xor(std::vector<uint8_t> &cipher_bytes) {
+std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> attack_repeating_key_xor(std::vector<uint8_t> &cipher_bytes) {
     int keysize = 2;
     const int MAX_KEYSIZE = 40;
     std::map<float, int> keysize_scores = get_keysize(MAX_KEYSIZE, cipher_bytes); // score, likely_keysize
@@ -131,6 +131,11 @@ void attack_repeating_key_xor(std::vector<uint8_t> &cipher_bytes) {
     print_array(decrypted_bytes);
     std::cout << std::endl; 
 
+    std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> results(likely_keysize, likely_key, decrypted_bytes);
+
+    //return likely_keysize likely_key decrypted_bytes
+    return results;
+
 }
 
 int main(void) {
@@ -144,7 +149,7 @@ int main(void) {
     const std::string filename = "./Texts/challenge6_decoded.txt";
     std::vector<uint8_t> cipher_bytes = read_file_bytes(filename);
 
-    attack_repeating_key_xor(cipher_bytes);
+    auto [likely_keysize, likely_key, decrypted_bytes] = attack_repeating_key_xor(cipher_bytes);
 
     return 0;
 }
