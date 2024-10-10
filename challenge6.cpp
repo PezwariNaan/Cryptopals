@@ -103,7 +103,6 @@ std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> attack_repeating_key
     
     // Select likely_keysize with lowest edit distance 
     int likely_keysize = keysize_scores.begin()->second;
-    std::cout << "Keysize: " << likely_keysize << "\n";
 
     // Break cipher_bytes into likely_keysize length blocks 
     std::map<int, std::vector<uint8_t>> keysize_blocks = make_blocks(likely_keysize, cipher_bytes); // index, block
@@ -119,17 +118,11 @@ std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> attack_repeating_key
     }
 
     std::vector<uint8_t> likely_key;
-    std::cout << "Key: " ;
     for (size_t i = 0; i < result_vector.size(); i++) {
         likely_key.push_back(result_vector[i].key);
-        std::cout << result_vector[i].key;
     }
-    std::cout << std::endl;
 
-    std::cout << "Decrypted Bytes: \n";
     std::vector<uint8_t> decrypted_bytes = cp::repeating_key_xor(cipher_bytes, likely_key);
-    print_array(decrypted_bytes);
-    std::cout << std::endl; 
 
     std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> results(likely_keysize, likely_key, decrypted_bytes);
 
@@ -150,6 +143,14 @@ int main(void) {
     std::vector<uint8_t> cipher_bytes = read_file_bytes(filename);
 
     auto [likely_keysize, likely_key, decrypted_bytes] = attack_repeating_key_xor(cipher_bytes);
+
+    std::cout << "Keysize: " << likely_keysize << "\n";
+    std::cout << "Key: " ;
+    print_array(likely_key);
+    std::cout << "\n";
+    std::cout << "Decrypted Bytes: \n";
+    print_array(decrypted_bytes);
+    std::cout << std::endl; 
 
     return 0;
 }
