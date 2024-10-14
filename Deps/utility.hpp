@@ -17,13 +17,13 @@ const std::vector<uint8_t> read_file_bytes(const std::string &file_name);
 //-------------------------------------------
 
 // Definitions
-void print_array(std::vector<uint8_t> array) {
+inline void print_array(std::vector<uint8_t> array) {
     for (size_t i = 0;i  < array.size(); i++)
         std::cout << array[i];
     return;
 }
 
-const std::string read_file(const std::string &file_name){
+inline const std::string read_file(const std::string &file_name){
     std::ifstream file(file_name);
     if (!file.is_open()) {
         std::cerr << "Error Opening " << file_name << std::endl;
@@ -35,7 +35,7 @@ const std::string read_file(const std::string &file_name){
     return buffer.str();
 }
 
-const std::map<int, std::string> read_lines(const std::string file_name) {
+inline const std::map<int, std::string> read_lines(const std::string file_name) {
     std::ifstream file(file_name);
     if (!file.is_open()) {
         std::cerr << "Error Opening " <<file_name << std::endl;
@@ -52,7 +52,7 @@ const std::map<int, std::string> read_lines(const std::string file_name) {
     return lines;
 }
 
-const std::vector<uint8_t> read_file_bytes(const std::string &file_name) {
+inline const std::vector<uint8_t> read_file_bytes(const std::string &file_name) {
     // Open file in binary mode
     std::ifstream file(file_name, std::ios::binary);
 
