@@ -10,7 +10,7 @@
 
 // Base64 Functions
 namespace cp {
-    std::vector<uint8_t> base64_decode(const std::string &input);
+    std::vector<uint8_t> base64_decode(const std::vector<uint8_t> &input);
     std::string base64_encode(const std::vector<uint8_t> &input);
 
     // Hex Functions

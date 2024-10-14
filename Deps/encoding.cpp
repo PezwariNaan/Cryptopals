@@ -39,7 +39,7 @@ std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	return b64_string;
 }
 
-std::vector<uint8_t> cp::base64_decode(const std::string &input) {
+std::vector<uint8_t> cp::base64_decode(const std::vector<uint8_t> &input) {
     const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     std::vector<uint8_t> byte_array;
 
@@ -49,7 +49,7 @@ std::vector<uint8_t> cp::base64_decode(const std::string &input) {
         lookup_table[b64_lookup_table[i]] = i;
     }
 
-    int input_len = input.length();
+    int input_len = input.size();
     
     // Process input in blocks of 4 Base64 characters
     for (int i = 0; i < input_len; i += 4) {
@@ -76,7 +76,6 @@ std::vector<uint8_t> cp::base64_decode(const std::string &input) {
     
     return byte_array;
 }
-
 
 std::vector<uint8_t> cp::hex_decode(const std::string &input) {
 	std::vector<uint8_t> byte_array;
