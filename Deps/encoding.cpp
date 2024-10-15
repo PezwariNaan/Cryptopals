@@ -1,4 +1,5 @@
 #include "encoding.hpp"
+#include <cstdint>
 
 std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -77,11 +78,19 @@ std::vector<uint8_t> cp::base64_decode(const std::vector<uint8_t> &input) {
     return byte_array;
 }
 
-std::vector<uint8_t> cp::hex_decode(const std::string &input) {
+std::vector<uint8_t> cp::hex_decode(const std::vector<uint8_t> &input) {
 	std::vector<uint8_t> byte_array;
-	for (size_t i = 0; i < input.length(); i+=2) {
+
+	for (size_t i = 0; i < input.size(); i+=2) {
+		if (i + 1 >= input.size()) break;
+		
 		// 1 Byte = 2 hex characters; so that's what we get
-		std::string byte_string = input.substr(i, 2);
+		uint8_t first_nibble = input[i];
+		uint8_t second_nibble = input[i + 1];
+
+		std::string byte_string;
+		byte_string.push_back(static_cast<char>(first_nibble));
+		byte_string.push_back(static_cast<char>(second_nibble));
 		
 		// Convert the 2 characters into one byte
 		uint8_t byte_value = static_cast<uint8_t> (
@@ -89,6 +98,7 @@ std::vector<uint8_t> cp::hex_decode(const std::string &input) {
 				);
 		byte_array.push_back(byte_value);
 	}
+
 	return byte_array;
 }
 

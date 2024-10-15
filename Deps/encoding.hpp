@@ -14,7 +14,7 @@ namespace cp {
     std::string base64_encode(const std::vector<uint8_t> &input);
 
     // Hex Functions
-    std::vector<uint8_t> hex_decode(const std::string &input);
+    std::vector<uint8_t> hex_decode(const std::vector<uint8_t> &input);
     std::string hex_encode(const std::vector<uint8_t> &input);
 }
 
