@@ -1,7 +1,7 @@
 #include "encrypting.hpp"
 
 // Encryption
-std::vector<uint8_t> cp::fixed_xor(std::vector<uint8_t> &start, std::vector<uint8_t> &key) {
+std::vector<uint8_t> cp::fixed_xor(const std::vector<uint8_t> &start, const std::vector<uint8_t> &key) {
     std::vector<uint8_t> result;
 
     if (key.size() != start.size()) {
@@ -18,7 +18,7 @@ std::vector<uint8_t> cp::fixed_xor(std::vector<uint8_t> &start, std::vector<uint
 // --------------------------------------------------------------------
 // These blocks of code are responsible for breaking XOR 'vignere' ciphers
 
-int cp::character_lookup(std::vector<uint8_t> &byte_array, uint8_t &key) {
+int cp::character_lookup(std::vector<uint8_t> &byte_array, const uint8_t &key) {
     const std::string common_string = "ETAOIN SHRDLU";
     std::vector<uint8_t> common_characters(common_string.begin(), common_string.end());
     int score = 0;
@@ -53,7 +53,7 @@ std::map<int, uint8_t> cp::get_scores(std::vector<uint8_t> &byte_array) {
     return key_score_map;
 }
 
-std::vector<uint8_t> cp::single_byte_xor(std::vector<uint8_t> &byte_array, uint8_t &key) {
+std::vector<uint8_t> cp::single_byte_xor(std::vector<uint8_t> &byte_array, const uint8_t &key) {
     std::vector<uint8_t> result;
     for (size_t i = 0; i < byte_array.size(); i++)
         result.push_back(byte_array[i] ^ key);
@@ -78,7 +78,7 @@ result cp::attack_single_byte_xor(std::vector<uint8_t> &cipher_bytes) {
 }
 // ----------------------------------------------------------------------
 
-std::vector<uint8_t> cp::repeating_key_xor(std::vector<uint8_t> &plain_bytes, std::vector<uint8_t> &key_bytes) {
+std::vector<uint8_t> cp::repeating_key_xor(const std::vector<uint8_t> &plain_bytes, const std::vector<uint8_t> &key_bytes) {
     std::vector<uint8_t> cipher_bytes;
 
     for (int i = 0; i < plain_bytes.size(); i++) {
@@ -180,7 +180,7 @@ std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> cp::attack_repeating
 
 }
 
-int cp::get_hamming_distance(std::vector<uint8_t> &first, std::vector<uint8_t> &second) {
+int cp::get_hamming_distance(const std::vector<uint8_t> &first, const std::vector<uint8_t> &second) {
 
     if (first.size() != second.size()) {
         std::cout << "Cannot find hamming distance. Strings are different lengths" << std::endl;

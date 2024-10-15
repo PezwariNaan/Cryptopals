@@ -27,7 +27,7 @@ namespace cp {
     // -----------------------
 
     // Attack Repeating Key Xor
-    int get_hamming_distance(std::vector<const uint8_t> &first, const std::vector<uint8_t> &second);
+    int get_hamming_distance(const std::vector<uint8_t> &first, const std::vector<uint8_t> &second);
     std::map<float, int> get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t> cipher_bytes);
     std::map<int, std::vector<uint8_t>> make_blocks(int keysize, std::vector<uint8_t> &cipher_bytes);
     std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> attack_repeating_key_xor(std::vector<uint8_t> &cipher_bytes);
