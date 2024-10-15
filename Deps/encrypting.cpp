@@ -1,4 +1,5 @@
 #include "encrypting.hpp"
+#include <cstddef>
 
 // Encryption
 std::vector<uint8_t> cp::fixed_xor(const std::vector<uint8_t> &start, const std::vector<uint8_t> &key) {
@@ -65,8 +66,7 @@ result cp::attack_single_byte_xor(std::vector<uint8_t> &cipher_bytes) {
     std::map<int, uint8_t> key_score_map = get_scores(cipher_bytes);
     
     // Get the highest scoring key
-    auto iter = key_score_map.begin();
-    auto end = key_score_map.end(); 
+    auto end = key_score_map.end();
     auto key = std::prev(end)->second;
     auto score = std::prev(end) ->first;
 
@@ -81,7 +81,7 @@ result cp::attack_single_byte_xor(std::vector<uint8_t> &cipher_bytes) {
 std::vector<uint8_t> cp::repeating_key_xor(const std::vector<uint8_t> &plain_bytes, const std::vector<uint8_t> &key_bytes) {
     std::vector<uint8_t> cipher_bytes;
 
-    for (int i = 0; i < plain_bytes.size(); i++) {
+    for (size_t i = 0; i < plain_bytes.size(); i++) {
         uint8_t xored_byte = plain_bytes[i] ^ key_bytes[i % key_bytes.size()];
         cipher_bytes.push_back(xored_byte);
     }
@@ -101,7 +101,7 @@ std::map<float, int> cp::get_keysize(const int MAX_KEYSIZE, std::vector<uint8_t>
         std::vector<std::vector<uint8_t>> block_vector;
 
         // Gather blocks of size 'likely_keysize'
-        for (int i = 0; i < cipher_bytes.size() / likely_keysize; i++) {  // Use the as many blocks as possible
+        for (size_t i = 0; i < cipher_bytes.size() / likely_keysize; i++) {  // Use the as many blocks as possible
             std::vector<uint8_t> block(cipher_bytes.begin() + i * likely_keysize, 
                                     cipher_bytes.begin() + (i + 1) * likely_keysize);
             
@@ -146,7 +146,6 @@ std::map<int, std::vector<uint8_t>> cp::make_blocks(int keysize, std::vector<uin
 }
 
 std::tuple<int, std::vector<uint8_t>, std::vector<uint8_t>> cp::attack_repeating_key_xor(std::vector<uint8_t> &cipher_bytes) {
-    int keysize = 2;
     const int MAX_KEYSIZE = 40;
     std::map<float, int> keysize_scores = cp::get_keysize(MAX_KEYSIZE, cipher_bytes); // score, likely_keysize
     

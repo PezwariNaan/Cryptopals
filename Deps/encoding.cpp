@@ -1,5 +1,7 @@
 #include "encoding.hpp"
+#include <cstddef>
 #include <cstdint>
+#include <sys/types.h>
 
 std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -46,7 +48,7 @@ std::vector<uint8_t> cp::base64_decode(const std::vector<uint8_t> &input) {
 
     // Precompute a reverse lookup table for Base64 characters
     std::vector<int> lookup_table(256, -1);
-    for (int i = 0; i < b64_lookup_table.size(); i++) {
+    for (size_t i = 0; i < b64_lookup_table.size(); i++) {
         lookup_table[b64_lookup_table[i]] = i;
     }
 
