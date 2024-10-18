@@ -1,8 +1,5 @@
 #include "encoding.hpp"
 #include "utility.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <stdexcept>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <vector>
@@ -29,7 +26,8 @@ std::vector<std::vector<uint8_t>> create_blocks(std::vector<uint8_t> plaintext) 
         }
         // Pad block if necessary
         if (block.size() < BLOCKSIZE) {
-            for (size_t padding_needed = BLOCKSIZE - block.size(); padding_needed > 0; padding_needed--) {
+            int padding_needed = BLOCKSIZE - block.size();
+            for (; padding_needed > 0; padding_needed--) {
                 block.push_back(0);
             }
         }
@@ -61,7 +59,6 @@ int main(void) {
 
     std::vector<std::vector<uint8_t>> blocks = create_blocks(read_file);
     for (size_t i = 0; i < blocks.size(); i++) {
-        //print_array(blocks[i]);
         std::cout << cp::hex_encode(blocks[i]);
         std::cout << "\n\n\n";
     }
