@@ -1,7 +1,11 @@
 #include "encoding.hpp"
+#include "encrypting.hpp"
 #include "utility.hpp"
+#include <cstddef>
+#include <cstdint>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
+#include <sys/types.h>
 #include <vector>
 
 #define BLOCKSIZE 16
@@ -28,7 +32,7 @@ std::vector<std::vector<uint8_t>> create_blocks(std::vector<uint8_t> plaintext) 
         if (block.size() < BLOCKSIZE) {
             int padding_needed = BLOCKSIZE - block.size();
             for (; padding_needed > 0; padding_needed--) {
-                block.push_back(0);
+                block.push_back(padding_needed);
             }
         }
         // Add block to block_vector;
@@ -37,19 +41,14 @@ std::vector<std::vector<uint8_t>> create_blocks(std::vector<uint8_t> plaintext) 
     return block_vector;
 }
 
-// Encrypt block with AES 128 ECB using provided Key 
-// std::vector<uint8_t> encrypt_block(const std::vector<uint8_t> key, std::vector<uint8_t> block) {
-//     const uint8_t *raw_block = (uint8_t *)block.data();
-//     const uint8_t *raw_key = (uint8_t *)key.data();
+std::vector<uint8_t> encrypt_block(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> block) {
+    std::vector<uint8_t> ciphertext(BLOCKSIZE);
+    int len = 0;
 
-//     const int key_len = key.size() * 8;
-//     if (key_len != 192) std::runtime_error("Key Length is not 192 bits");
+    EVP_EncryptUpdate(ctx, ciphertext.data(), &len, block.data(), block.size());
 
-//     AES_KEY aes_key;
-
-// }
-
-// XOR block 1 with block 2 - order does not matter (commutative property)
+    return ciphertext;
+}
 
 // Implement CBC
 
@@ -59,29 +58,40 @@ int main(void) {
 
     std::vector<std::vector<uint8_t>> blocks = create_blocks(read_file);
     for (size_t i = 0; i < blocks.size(); i++) {
-        std::cout << cp::hex_encode(blocks[i]);
-        std::cout << "\n\n\n";
+        print_array(blocks[i]);
+        std::cout << "\n";
     }
-    // std::vector<uint8_t> key(key_string.begin(), key_string.end());
-    // std::vector<uint8_t> iv = generate_iv();
-    // const uint8_t *raw_iv = (uint8_t *)iv.data();
-    // const uint8_t *raw_key = (uint8_t *)key.data();
 
-    // EVP_CIPHER_CTX *ctx;
-    // int len;
-    // int block_len;
-    // int ciphertext_len;
-    // uint8_t *cipher_text;
-    // uint8_t *raw_block;
+    std::vector<uint8_t> key_vector(key_string.begin(), key_string.end());
+    const uint8_t *key = (uint8_t *)key_vector.data();
+    std::vector<uint8_t> iv_vector = generate_iv();
 
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
-    // if (!(EVP_CIPHER_CTX_new())) 
-    //     std::runtime_error("Error Creating EVP Cipher Context.");
+    if (!ctx) 
+        std::runtime_error("Error Creating EVP Cipher Context.");
 
-    // if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, raw_key, raw_iv) != 1)
-    //     std::runtime_error("Error Initalising Encryption Engine.");
+    if (EVP_EncryptInit(ctx, EVP_aes_128_ecb(), key, NULL) != 1)
+        std::runtime_error("Error Initalising Encryption Engine.");
     
-    // if(EVP_EncryptUpdate(ctx, cipher_text, &len, raw_block, block_len))
+    // Encrypt First Block
+    std::vector<std::vector<uint8_t>> encrypted_blocks;
+    std::vector<uint8_t> first_xored_block = cp::fixed_xor(blocks[0], iv_vector);
+    std::vector<uint8_t> first_encrypted_block = encrypt_block(ctx, first_xored_block);
+    encrypted_blocks.push_back(first_encrypted_block);
+    
+    // Encrypt Rest of the Blocks
+    for (size_t i = 1; i < blocks.size(); i++) {
+        std::vector<uint8_t> xored_block = cp::fixed_xor(encrypted_blocks[i - 1], blocks[i]);
+        std::vector<uint8_t> encrypted_block = encrypt_block(ctx, xored_block);
+        encrypted_blocks.push_back(encrypted_block);
+    }
 
+    for (size_t i = 0; i < encrypted_blocks.size(); i++) {
+        print_array(encrypted_blocks[i]);
+        std::cout << "\n";
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
     return 0;
 }
