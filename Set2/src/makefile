@@ -2,17 +2,15 @@
 CC = g++
 DEPS_DIR = ../../Deps/
 LIB_DIR = $(DEPS_DIR)target/
-CFLAGS = -g -Wall -I $(DEPS_DIR)
+CFLAGS = -g -std=c++14 -Wall -I$(DEPS_DIR) -D_GLIBCXX_USE_CXX11_ABI=1
 # Output Directory 
 OUTPUT_DIR = ../target/
-# Add library path to linker path
-export LD_LIBRARY_PATH += $(LIB_DIR)
 
 #CPP Dependencies 
-DEPS = -lencoding -lencrypting -lcrypto
+DEPS = -lcrypto -L$(LIB_DIR) -lcryptopals
 
 challenge%: challenge%.cpp
-	$(CC) $(CFLAGS) -L$(LIB_DIR) $(DEPS) $< -o $(OUTPUT_DIR)$@
+	$(CC) $(CFLAGS) $< -o $(OUTPUT_DIR)$@ $(DEPS)
 	$(OUTPUT_DIR)$@
 
 clean:

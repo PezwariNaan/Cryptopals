@@ -34,4 +34,8 @@ namespace cp {
     // ------------------------
 }
 
+namespace openssl {
+    std::vector<u_int8_t> add_pkcs7_padding(uint8_t specified_padding, std::vector<uint8_t> &my_vector);
+}
+
 #endif // ENCRYPTING_H

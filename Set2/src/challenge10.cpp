@@ -1,22 +1,10 @@
 #include "encoding.hpp"
 #include "encrypting.hpp"
 #include "utility.hpp"
-#include <cstddef>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 
-
 #define BLOCKSIZE 16
-
-// Generate IV
-std::vector<uint8_t> generate_iv(void) {
-    std::vector<uint8_t> iv;
-
-    for (char i = 0; i < 16; i++) {
-        iv.push_back('0');
-    }
-    return iv;
-} 
 
 // Get 16 byte blocks (with pkcs#7 if a block isn't long enough)
 std::vector<std::vector<uint8_t>> create_blocks(std::vector<uint8_t> plaintext) {
@@ -44,6 +32,7 @@ std::vector<uint8_t> encrypt_block(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> blo
     int len = 0;
 
     EVP_EncryptUpdate(ctx, ciphertext.data(), &len, block.data(), block.size());
+    ciphertext.resize(len);
 
     return ciphertext;
 }
@@ -52,20 +41,23 @@ std::vector<uint8_t> encrypt_block(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> blo
 
 int main(void) {
     std::vector<uint8_t> read_file =  read_file_bytes("./Texts/challenge10_decoded");
-    std::string key_string = "YELLOW SUBMARINE";
 
     std::vector<std::vector<uint8_t>> blocks = create_blocks(read_file);
 
-    std::vector<uint8_t> key_vector(key_string.begin(), key_string.end());
-    const uint8_t *key = (uint8_t *)key_vector.data();
-    std::vector<uint8_t> iv_vector = generate_iv();
+    const uint8_t key[BLOCKSIZE] = {'Y', 'E', 'L', 'L', 'O', 'W', ' ', 
+                             'S', 'U', 'B', 'M', 'A', 'R', 'I', 'N', 'E'};
+
+    std::vector<uint8_t> iv_vector = {0, 0, 0, 0,
+                                      0, 0, 0, 0,
+                                      0, 0, 0, 0, 
+                                     0, 0, 0, 0};
 
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
     if (!ctx) 
         std::runtime_error("Error Creating EVP Cipher Context.");
 
-    if (EVP_EncryptInit(ctx, EVP_aes_128_ecb(), key, NULL) != 1)
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key, NULL) != 1)
         std::runtime_error("Error Initalising Encryption Engine.");
     
     // Encrypt First Block
@@ -76,28 +68,26 @@ int main(void) {
     
     // Encrypt Rest of the Blocks
     for (size_t i = 1; i < blocks.size(); i++) {
-        std::vector<uint8_t> xored_block = cp::fixed_xor(encrypted_blocks[i - 1], blocks[i]);
+        std::vector<uint8_t> xored_block = cp::fixed_xor(blocks[i], encrypted_blocks[i - 1]);
         std::vector<uint8_t> encrypted_block = encrypt_block(ctx, xored_block);
         encrypted_blocks.push_back(encrypted_block);
     }
 
-    // for (size_t i = 0; i < encrypted_blocks.size(); i++) {
-    //     print_array(encrypted_blocks[i]);
-    //     std::cout << "\n";
-    // }
-
-    for (size_t i = 0; i < blocks.size(); i++) {
-    std::cout << cp::hex_encode(blocks[i]);
-    std::cout << "\n";
+    for (size_t i = 0; i < encrypted_blocks.size(); i++) {
+        print_array(encrypted_blocks[i]);
+        std::cout << "\n";
     }
-    std::cout << "\n\n";
 
     // Debug Statements
-    std::cout << "IV:\n";
-    print_array(iv_vector);
+    std::cout << "IV Size: " << iv_vector.size() << "\n\n";
+    std::cout << "Block Size: " << blocks[0].size() << "\n\n";
+    std::cout << "Key: " << key << "\n\n";
+
+    std::cout << "IV as hex:\n";
+    std::cout << cp::hex_encode(iv_vector);
     std::cout << "\n\n";
 
-    std::cout << "First Hex Encoded Block:\n";
+    std::cout << "First hex encoded Block:\n";
     std::cout << cp::hex_encode(blocks[0]);
     std::cout << "\n\n";
 
@@ -108,6 +98,18 @@ int main(void) {
     std::cout << "First block encrypted after XOR: \n";
     std::cout << cp::hex_encode(first_encrypted_block);
     std::cout << "\n\n";
+
+    std::cout << "First block as byte: \n";
+    print_array(blocks[0]);
+    std::cout << "\n\n";
+
+    std::cout << "First block XORd as bytes:\n";
+    print_array(first_xored_block);
+    std::cout << "\n\n";
+
+    std::cout << " First XORd block encrypted as bytes:\n";
+    print_array(first_encrypted_block);
+    std::cout << "\n\n"; 
 
     EVP_CIPHER_CTX_free(ctx);
     return 0;

@@ -1,5 +1,4 @@
 #include "utility.hpp"
-#include "encoding.hpp"
 #include "encrypting.hpp"
 
 int test(std::vector<uint8_t> first, std::vector<uint8_t> second) {
