@@ -198,7 +198,7 @@ int cp::get_hamming_distance(const std::vector<uint8_t> &first, const std::vecto
     return score;
 }
 
-std::vector<u_int8_t> openssl::add_pkcs7_padding(uint8_t specified_padding, std::vector<uint8_t> &my_vector) {
+std::vector<uint8_t> openssl::add_pkcs7_padding(uint8_t specified_padding, std::vector<uint8_t> &my_vector) {
         # ifndef MAX_PADDING
         # define MAX_PADDING 16
         # endif

@@ -7,7 +7,7 @@
 // Implement PKCS#7 Padding
 #define MAX_PADDING 16
 
-std::vector<u_int8_t> add_pkcs7_padding(uint8_t specified_padding, std::vector<uint8_t> &my_vector) {
+std::vector<uint8_t> add_pkcs7_padding(uint8_t specified_padding, std::vector<uint8_t> &my_vector) {
         std::vector<uint8_t> my_vec_with_padding = my_vector;
         for (uint8_t i = 0; i < specified_padding; i++) {
         if (specified_padding > MAX_PADDING) {
