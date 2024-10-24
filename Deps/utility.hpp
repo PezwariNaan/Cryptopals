@@ -1,6 +1,7 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
+#include <cstddef>
 #include <sys/types.h>
 #include <vector>
 #include <iostream>
@@ -16,6 +17,7 @@ void print_array(std::vector<uint8_t> array);
 const std::string read_file(const std::string &file_name);
 const std::map<int, std::vector<uint8_t>> read_lines(const std::string filename);
 const std::vector<uint8_t> read_file_bytes(const std::string &file_name);
+const std::vector<std::vector<uint8_t>> create_blocks(std::vector<uint8_t> plaintext);
 //-------------------------------------------
 
 // Definitions
@@ -79,6 +81,29 @@ inline const std::vector<uint8_t> read_file_bytes(const std::string &file_name) 
     }
 
     return buffer;
+}
+
+inline const std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext) {
+    #ifndef BLOCKSIZE
+    #define BLOCKSIZE 16
+    #endif 
+    
+    std::vector<std::vector<uint8_t>> block_vector; // All blocks
+    size_t i = 0;
+    for (; i + BLOCKSIZE <= plaintext.size(); i += BLOCKSIZE)
+        block_vector.emplace_back(plaintext.begin() + i, plaintext.begin() + i + BLOCKSIZE);
+
+    // Pad block if necessary
+    if (i < plaintext.size()) {
+        std::vector<uint8_t> block(plaintext.begin() + i, plaintext.end());
+        size_t padding_needed = BLOCKSIZE - block.size();
+        block.insert(block.end(), padding_needed, padding_needed);
+
+        // Add block to block_vector;
+        block_vector.push_back(block);
+    }
+
+    return block_vector;
 }
 //-------------------------------------------
 
