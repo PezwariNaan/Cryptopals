@@ -4,8 +4,6 @@
 
 #define BLOCKSIZE 16
 
-// (DONE) Detect which cipher was used. 
-
 // Generate Key
 std::vector<uint8_t> generate_key(void) {
     std::vector<uint8_t> key;
