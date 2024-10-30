@@ -8,6 +8,7 @@
 #include <map>
 #include <cstdint>
 #include <memory>
+#include <openssl/evp.h>
 
 struct result {
     std::vector<uint8_t> decrypted_bytes;

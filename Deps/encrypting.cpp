@@ -1,5 +1,8 @@
 #include "encrypting.hpp"
+#include "utility.hpp"
 #include <cstddef>
+#include <cstdint>
+#include <vector>
 
 // Encryption
 std::vector<uint8_t> cp::fixed_xor(const std::vector<uint8_t> &start, const std::vector<uint8_t> &key) {
@@ -196,20 +199,4 @@ int cp::get_hamming_distance(const std::vector<uint8_t> &first, const std::vecto
     }
 
     return score;
-}
-
-std::vector<uint8_t> openssl::add_pkcs7_padding(uint8_t specified_padding, std::vector<uint8_t> &my_vector) {
-        # ifndef MAX_PADDING
-        # define MAX_PADDING 16
-        # endif
-        
-        std::vector<uint8_t> my_vec_with_padding = my_vector;
-        for (uint8_t i = 0; i < specified_padding; i++) {
-        if (specified_padding > MAX_PADDING) {
-            throw std::runtime_error("Specified Padding Cannot Exceed 16.");
-        }
-
-        my_vec_with_padding.push_back(specified_padding);
-    }
-    return my_vec_with_padding;
 }
