@@ -1,7 +1,11 @@
 #include "encoding.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <sys/types.h>
+
+#define PY_SSIZE_T_CLEAN
+#include <python3.12/Python.h>
 
 std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -78,6 +82,67 @@ std::vector<uint8_t> cp::base64_decode(const std::vector<uint8_t> &input) {
     }
     
     return byte_array;
+}
+
+std::vector<uint8_t> cp::py_base64decode(const std::string filename, const char *argv) {
+    std::vector<uint8_t> b64_vector;
+
+    PyStatus status;
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+
+    /* optional but recommended */
+    status = PyConfig_SetBytesString(&config, &config.program_name, &argv[0]);
+    if (PyStatus_Exception(status)) {
+        PyConfig_Clear(&config);  // Clear on error
+        Py_ExitStatusException(status);
+    }
+
+    /* Initialize the Python interpreter with the config */
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) {
+        PyConfig_Clear(&config);  // Clear on error
+        Py_ExitStatusException(status);
+    }
+
+    /* Clear the config after initialization */
+    PyConfig_Clear(&config);
+
+    /* Base64 decode selected string using Python */
+    char code[1024];
+    snprintf(code, sizeof(code), 
+    "from base64 import b64decode\n"
+    "with open('%s', 'rb') as file:\n"
+    "\tlines = b' '.join(file.readlines())\n"
+    "\tb64_decoded = b64decode(lines)\n", filename.data());
+
+    PyRun_SimpleString(code);
+
+    /* Initalise python 'main' & access the global dictionary */
+    PyObject *main_module = PyImport_AddModule("__main__");
+    PyObject *global_dict = PyModule_GetDict(main_module);
+
+    PyObject *ptr_b64decoded = PyDict_GetItemString(global_dict, "b64_decoded");
+
+    if (ptr_b64decoded) {
+        if (PyBytes_Check(ptr_b64decoded)) {
+            Py_ssize_t size = PyBytes_GET_SIZE(ptr_b64decoded);
+            uint8_t *data = reinterpret_cast<uint8_t*>(PyBytes_AS_STRING(ptr_b64decoded));
+            b64_vector.assign(data, data + size);
+
+        } else {
+            throw std::runtime_error("Error: 'b64_decoded' is not of type bytes.");
+        }
+    } else {
+        throw std::runtime_error("Error: Variable 'b64_decoded' not found in Global Dictionary.");
+    }
+
+    /* Finalize the Python interpreter */
+    if (Py_FinalizeEx() < 0) {
+        exit(120);
+    }
+
+    return b64_vector;
 }
 
 std::vector<uint8_t> cp::hex_decode(const std::vector<uint8_t> &input) {
