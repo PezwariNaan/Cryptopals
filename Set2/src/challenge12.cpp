@@ -26,13 +26,13 @@ int main(int argc, char *argv[]) {
     std::vector<uint8_t> padded_ciphertext = openssl::encrypt_ecb(ctx, padded_plaintext, key);
 
     int padding_size = 0;
-    while (ciphertext.size() == padded_ciphertext.size()) {
+    do {
         padding_size++;
         padding.assign(padding_size, 'B');
         padded_plaintext = plaintext;
         padded_plaintext.insert(padded_plaintext.begin(), padding.begin(), padding.end());
         padded_ciphertext = openssl::encrypt_ecb(ctx, padded_plaintext, key);
-    }
+    } while (ciphertext.size() == padded_ciphertext.size());
 
     blocksize = padded_ciphertext.size() - ciphertext.size();
     unpadded_ciphertext_size = ciphertext.size() - (blocksize - padding_size);
@@ -46,6 +46,6 @@ int main(int argc, char *argv[]) {
     //      Repeat for next byte 
     //      Print result
 
-
+    EVP_CIPHER_CTX_free(ctx);
     return 0;
 }
