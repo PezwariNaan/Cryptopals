@@ -1,14 +1,6 @@
 #include "openssl.hpp"
 #include "utility.hpp"
 #include "encoding.hpp"
-// --------------------
-#include <cmath>
-#include <cstdint>
-#include <iostream>
-#include <openssl/evp.h>
-#include <ostream>
-#include <sys/types.h>
-#include <vector>
 
 // Generate Key
 std::vector<uint8_t> generate_key(void) {
