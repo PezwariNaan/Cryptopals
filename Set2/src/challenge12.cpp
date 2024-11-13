@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iostream>
 #include <openssl/evp.h>
+#include <ostream>
 #include <sys/types.h>
 #include <vector>
 
@@ -37,7 +38,6 @@ std::vector<uint8_t> encrypt_plaintext(const std::vector<uint8_t> my_string, con
 
 int get_blocksize(const std::vector<uint8_t> plaintext) {
     int blocksize = 0;
-    int padding = 0;
     std::vector<uint8_t> my_string = {'0'}; // This is what we will use to pad the start of each ciphertext
     std::vector<uint8_t> ciphertext = encrypt_plaintext(my_string, plaintext);
     std::vector<uint8_t> padded_ciphertext;
@@ -47,7 +47,6 @@ int get_blocksize(const std::vector<uint8_t> plaintext) {
         my_string.insert(my_string.end(), '0');
     } while (ciphertext.size() == padded_ciphertext.size());
     blocksize = padded_ciphertext.size() - ciphertext.size();
-    padding = blocksize - my_string.size() - 1;
     
     return blocksize;
 }
@@ -60,9 +59,19 @@ std::string detect_ecb(const std::vector<uint8_t> plaintext, const int blocksize
     return mode;
 }
 
+// TODO: 
+        // Write This Function
+        // Make 'attack_ecb' accept transposed blocks 
+        // Finished. 
+
+std::vector<uint8_t> transpose_blocks(std::vector<uint8_t> ciphertext, int blocksize) {
+    std::vector<uint8_t> transposed_blocks;
+    return transposed_blocks;
+}
+
 std::vector<uint8_t> attack_ecb(std::vector<uint8_t> plaintext, int blocksize) {
     std::vector<uint8_t> result;
-    for (size_t byte_position = 0; byte_position < plaintext.size(); byte_position++) {
+    while (result.size() < plaintext.size()) {
         int padding_size = blocksize - (result.size() % blocksize) - 1;
         std::vector<uint8_t> padding(padding_size, '0');
 
@@ -106,12 +115,13 @@ int main(int argc, char *argv[]) {
     std::string mode = detect_ecb(plaintext, blocksize);
 
     if (mode != "ECB") {
-        std::cerr << "AES Encryption is not ECB." << std::endl;
+        std::cerr << "AES Encryption mode is not ECB." << std::endl;
         return 1;
     }
 
     std::vector<uint8_t> guess = attack_ecb(plaintext, blocksize);
     print_array(guess);
+    std::cout << std::endl;
 
     return 0;
 }
