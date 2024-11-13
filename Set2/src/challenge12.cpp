@@ -2,6 +2,7 @@
 #include "utility.hpp"
 #include "encoding.hpp"
 // --------------------
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <openssl/evp.h>
@@ -76,7 +77,10 @@ std::vector<uint8_t> attack_ecb(std::vector<uint8_t> plaintext, int blocksize) {
         std::vector<uint8_t> padding(padding_size, '0');
 
         std::vector<uint8_t> ciphertext = encrypt_plaintext(padding, plaintext);
-        std::vector<uint8_t> target_block(ciphertext.begin(), ciphertext.begin() + blocksize);
+
+        int block_index = result.size()/ blocksize;
+        std::vector<uint8_t> target_block(ciphertext.begin() + (block_index * blocksize), 
+                                        ciphertext.begin() + (block_index + 1) * blocksize);
 
         bool byte_found = false;
         for (uint8_t guess = 0; guess < 255; guess++) {
@@ -86,7 +90,8 @@ std::vector<uint8_t> attack_ecb(std::vector<uint8_t> plaintext, int blocksize) {
             attempt.push_back(guess);
 
             std::vector<uint8_t> attempt_ciphertext = encrypt_plaintext(attempt, plaintext);
-            std::vector<uint8_t> attempt_block(attempt_ciphertext.begin(), attempt_ciphertext.begin() + blocksize);
+            std::vector<uint8_t> attempt_block(attempt_ciphertext.begin() + (block_index * blocksize), 
+                                                attempt_ciphertext.begin() + (block_index + 1) * blocksize);
 
             if (attempt_block == target_block) {
                 result.push_back(guess);
