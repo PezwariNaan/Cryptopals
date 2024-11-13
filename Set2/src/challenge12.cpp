@@ -60,28 +60,20 @@ std::string detect_ecb(const std::vector<uint8_t> plaintext, const int blocksize
     return mode;
 }
 
-// TODO: 
-        // Write This Function
-        // Make 'attack_ecb' accept transposed blocks 
-        // Finished. 
-
-std::vector<uint8_t> transpose_blocks(std::vector<uint8_t> ciphertext, int blocksize) {
-    std::vector<uint8_t> transposed_blocks;
-    return transposed_blocks;
-}
-
 std::vector<uint8_t> attack_ecb(std::vector<uint8_t> plaintext, int blocksize) {
     std::vector<uint8_t> result;
-    while (result.size() < plaintext.size()) {
+    while (result.size() < plaintext.size()) { // Little bit of a cheat - should ideally hide plaintext from the rest of the program & use the stripped ciphertext. 
         int padding_size = blocksize - (result.size() % blocksize) - 1;
         std::vector<uint8_t> padding(padding_size, '0');
 
         std::vector<uint8_t> ciphertext = encrypt_plaintext(padding, plaintext);
 
+        // Once there are blocksize number of elements in results - the block_index will increment
         int block_index = result.size()/ blocksize;
         std::vector<uint8_t> target_block(ciphertext.begin() + (block_index * blocksize), 
                                         ciphertext.begin() + (block_index + 1) * blocksize);
 
+        // Loop through all possible values in the ASCII table for whichever byte we are attempting to decrypt. 
         bool byte_found = false;
         for (uint8_t guess = 0; guess < 255; guess++) {
 
@@ -92,7 +84,7 @@ std::vector<uint8_t> attack_ecb(std::vector<uint8_t> plaintext, int blocksize) {
             std::vector<uint8_t> attempt_ciphertext = encrypt_plaintext(attempt, plaintext);
             std::vector<uint8_t> attempt_block(attempt_ciphertext.begin() + (block_index * blocksize), 
                                                 attempt_ciphertext.begin() + (block_index + 1) * blocksize);
-
+        // If there is a match append to results vector.
             if (attempt_block == target_block) {
                 result.push_back(guess);
                 byte_found = true;
@@ -123,7 +115,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "AES Encryption mode is not ECB." << std::endl;
         return 1;
     }
-
+    // Break Encryption
     std::vector<uint8_t> guess = attack_ecb(plaintext, blocksize);
     print_array(guess);
     std::cout << std::endl;
