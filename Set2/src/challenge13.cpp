@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <map>
 
@@ -20,8 +21,26 @@ Produces
 // try | catch block :)
 
 #define STACK_SIZE      1024
-#define STACK_ERROR     1
-#define INVALID_COOKIE  2
+
+class stack_error : public std::exception {
+    public:
+        stack_error(const std::string &message) : message_(message) {}
+        const char* what() const throw() {return message_.c_str();}
+    
+    private:
+        std::string message_;
+};
+
+class invalid_cookie_error : public std::exception {
+    public:
+        invalid_cookie_error(const std::string &message) : message_(message) {}
+        const char* what() const throw() {return message_.c_str();}
+
+    private:
+        std::string message_;
+
+};
+
 
 typedef struct stack {
     int index;
@@ -38,8 +57,7 @@ void push(stack *my_stack, char value_to_push) {
     if (my_stack->index < STACK_SIZE) {
         my_stack->array[my_stack->index] = value_to_push;
     } else {
-        std::cerr << "Cannot Push To Stack - Stack Full" << std::endl;
-        throw STACK_ERROR;
+        throw stack_error("Cannot Push To Stack - Stack Full");
     }
     return;
 }
@@ -50,8 +68,7 @@ char pop(stack *my_stack) {
         my_stack->index--;
         return value;
     } else {
-        std::cerr << "Cannot Pop From Stack - Stack Empty" << std::endl;
-        throw STACK_ERROR;
+        throw stack_error("Cannot Pop From Stack - Stack Empty");
     }
 }
 
@@ -79,8 +96,7 @@ std::map<std::string,std::string> parse_cookie(std::string cookie) {
         }
     
     } else {
-        std::cerr << "No Cooking Provided" <<std::endl;
-        throw INVALID_COOKIE;
+        throw invalid_cookie_error("No Cookie Provided");
     }
 
     user_dict[current_key] = current_value;
@@ -89,15 +105,22 @@ std::map<std::string,std::string> parse_cookie(std::string cookie) {
 }
 
 int main(void) {
-    std::string cookie = "foo=bar&";
-    std::map<std::string, std::string> parsed = parse_cookie(cookie);
-
-    auto my_iter = parsed.begin();
-    while (my_iter != parsed.end()) {
-        std::cout << "Key: " << my_iter->first << '\n';
-        std::cout << "Value: " << my_iter->second << '\n';
-        my_iter++;
-    }
+    try {
+        std::string cookie = "foo=bar&";
+        std::map<std::string, std::string> parsed = parse_cookie(cookie);
+        auto my_iter = parsed.begin();
+        while (my_iter != parsed.end()) {
+            std::cout << "Key: " << my_iter->first << '\n';
+            std::cout << "Value: " << my_iter->second << '\n';
+            my_iter++;
+        }
+    } catch (const invalid_cookie_error& e) {
+        std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
+    } catch (const stack_error& e) {
+        std::cerr << "Stack Error: " << e.what() << '\n';
+    } catch (const std::exception& e) {
+        std::cerr << "General Exception: " << e.what() << '\n';
+     }
 
     return 0;
 }
