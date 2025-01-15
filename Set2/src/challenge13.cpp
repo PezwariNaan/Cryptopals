@@ -4,32 +4,7 @@
 #include <iostream>
 #include <map>
 
-/* 
-foo=bar&baz=qux&zap=zazzle
-
-Produces 
-
- {
-  foo: 'bar',
-  baz: 'qux',
-  zap: 'zazzle'
-}
-*/
-
-// TODO:
-// Update error definitions to classes and properly implement
-// try | catch block :)
-
 #define STACK_SIZE      1024
-
-class stack_error : public std::exception {
-    public:
-        stack_error(const std::string &message) : message_(message) {}
-        const char* what() const throw() {return message_.c_str();}
-    
-    private:
-        std::string message_;
-};
 
 class invalid_cookie_error : public std::exception {
     public:
@@ -38,39 +13,22 @@ class invalid_cookie_error : public std::exception {
 
     private:
         std::string message_;
-
 };
 
+class invalid_email_error : public std::exception {
+	public:
+		invalid_email_error(const std::string &message) : message_(message) {}
+		const char* what() const throw() {return message_.c_str();}
 
-typedef struct stack {
-    int index;
-    char array[STACK_SIZE];
-} stack;
+	private:
+		std::string message_;
+};
 
-stack init_stack() {
-    stack my_stack;
-    memset(&my_stack.array, 0, STACK_SIZE);
-    return my_stack;
-}
-
-void push(stack *my_stack, char value_to_push) {
-    if (my_stack->index < STACK_SIZE) {
-        my_stack->array[my_stack->index] = value_to_push;
-    } else {
-        throw stack_error("Cannot Push To Stack - Stack Full");
-    }
-    return;
-}
-
-char pop(stack *my_stack) {
-    if (my_stack->index > 0) {
-        char value = my_stack->array[my_stack->index];
-        my_stack->index--;
-        return value;
-    } else {
-        throw stack_error("Cannot Pop From Stack - Stack Empty");
-    }
-}
+struct cookie {
+	int id;
+	std::string email;
+	std::string role;
+};
 
 std::map<std::string,std::string> parse_cookie(std::string cookie) {
     std::map<std::string, std::string> user_dict;
@@ -81,46 +39,78 @@ std::map<std::string,std::string> parse_cookie(std::string cookie) {
     size_t index = 0;
 
     if (cookie.length() > 1) {
-        while (cookie[index] != '=' && index < cookie.length()) {
-            current_key += cookie[index];
-            index++;
-        }
+		do {
+			while (cookie[index] != '=' && index < cookie.length()) {
+				current_key += cookie[index];
+				index++;
+			}
 
-        if (index < cookie.length() || cookie[index] == '=') {
-            index++;
-        }
+			if (index < cookie.length() || cookie[index] == '=') {
+				index++;
+			}
 
-        while (cookie[index] != '&' && index < cookie.length()) {
-            current_value += cookie[index];
-            index++;
-        }
+			while (cookie[index] != '&' && index < cookie.length()) {
+				current_value += cookie[index];
+				index++;
+			}
+			
+			if (index < cookie.length() && cookie[index] == '&') {
+				index++;
+			}
+
+			user_dict[current_key] = current_value;
+			current_key.clear();
+			current_value.clear();
+
+		} while (index < cookie.length());
     
     } else {
         throw invalid_cookie_error("No Cookie Provided");
     }
 
-    user_dict[current_key] = current_value;
-
     return user_dict;
+}
+
+cookie profile_for(std::string email, std::string role) {
+	for (size_t i = 0; i < email.length(); i++) {
+		if (email[i] == '&' || email[i] == '=')
+			throw invalid_email_error("Invalid Character in Role");
+	}
+
+	for (size_t i = 0; i < role.length(); i++) {
+		if (role[i] == '&' || role[i] == '=')
+			throw invalid_email_error("Invalid Character In Email");
+	}
+	
+	static int id = 1;
+	cookie my_cookie = {id, email, role};
+
+	return my_cookie;
 }
 
 int main(void) {
     try {
-        std::string cookie = "foo=bar&";
-        std::map<std::string, std::string> parsed = parse_cookie(cookie);
+        std::string to_parse = "foo=bar&zap=zazzle";
+        std::map<std::string, std::string> parsed = parse_cookie(to_parse);
         auto my_iter = parsed.begin();
         while (my_iter != parsed.end()) {
             std::cout << "Key: " << my_iter->first << '\n';
             std::cout << "Value: " << my_iter->second << '\n';
             my_iter++;
         }
+
+		cookie my_cookie = profile_for("hello@gmail.com", "admin");
+		std::cout << my_cookie.email << '\n';
+		std::cout << my_cookie.id << '\n';
+		std::cout << my_cookie.role << '\n';
+
     } catch (const invalid_cookie_error& e) {
         std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
-    } catch (const stack_error& e) {
-        std::cerr << "Stack Error: " << e.what() << '\n';
-    } catch (const std::exception& e) {
+    } catch (const invalid_email_error& e) {
+		std::cerr << "Email Error: " << e.what() << '\n';
+	} catch (const std::exception& e) {
         std::cerr << "General Exception: " << e.what() << '\n';
-     }
-
+	}
     return 0;
 }
+
