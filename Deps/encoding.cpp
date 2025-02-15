@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 #define PY_SSIZE_T_CLEAN
-#include <python3.12/Python.h>
+#include <python3.13/Python.h>
 
 std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

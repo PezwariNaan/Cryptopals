@@ -108,29 +108,20 @@ int main(void) {
 			uint8_t random_index = rand() % sizeof(lookup_table) / sizeof(char);
 			key.push_back(lookup_table[random_index]);
 			index++;
-			std::cout << index;
 		}
 
 		cookie my_cookie = profile_for("hello@gmail.com", "admin");
 		//cookie my_cookie2 = profile_for("hello@gmail.com", "admin"); // Only here for testing
-		cookie my_cookie2 = profile_for("hello2@gmail.com", "user");
+		//cookie my_cookie2 = profile_for("hello2@gmail.com", "user");
 
 		encrypt_cookie(my_cookie, ctx, key);
-		encrypt_cookie(my_cookie2, ctx, key);
+		//encrypt_cookie(my_cookie2, ctx, key);
 
 		print_array(my_cookie.email);
 		std::cout << '\n';
 		print_array(my_cookie.role);
 		std::cout << '\n';
-		print_array(my_cookie.role);
-		std::cout << '\n';
 
-		print_array(my_cookie2.email);
-		std::cout << '\n';
-		print_array(my_cookie2.role);
-		std::cout << '\n';
-		print_array(my_cookie2.role);
-		std::cout << '\n';
 
     } catch (const invalid_cookie_error& e) {
         std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
