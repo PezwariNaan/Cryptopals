@@ -19,11 +19,6 @@ class invalid_email_error : public std::exception {
 		std::string message_;
 };
 
-struct cookie {
-		std::string email;
-		std::string role;
-};
-
 class Profile {
 	public:
 		std::vector<uint8_t> email;
@@ -34,17 +29,17 @@ class Profile {
 		}
 
 		void create(std::string cookie) {
-			struct cookie parsed_cookie = parse_cookie(cookie);
-			std::vector<uint8_t> email_vec(parsed_cookie.email.begin(), parsed_cookie.email.end() - 1);
-			std::vector<uint8_t> role_vec(parsed_cookie.role.begin(), parsed_cookie.role.end() - 1);
+			parse_cookie(cookie);
+			std::vector<uint8_t> temp_email = email;
+			std::vector<uint8_t> temp_role = role;
 
-			for (size_t i = 0; i < email_vec.size(); i++) {
-				if (email_vec[i] == '&' || email_vec[i] == '=')
+			for (size_t i = 0; i < email.size(); i++) {
+				if (email[i] == '&' || email[i] == '=')
 					throw invalid_email_error("Invalid Character in Email");
 			}
 
-			for (size_t i = 0; i < role_vec.size(); i++) {
-				if (role_vec[i] == '&' || role_vec[i] == '=')
+			for (size_t i = 0; i < role.size(); i++) {
+				if (role[i] == '&' || role[i] == '=')
 					throw invalid_email_error("Invalid Character In role");
 			}
 			
@@ -52,8 +47,8 @@ class Profile {
 			
 			id++;
 			
-			email = openssl::encrypt_ecb(ctx, email_vec, &key);
-			role = openssl::encrypt_ecb(ctx, role_vec, &key);
+			email = openssl::encrypt_ecb(ctx, temp_email, &key);
+			role = openssl::encrypt_ecb(ctx, temp_role, &key);
 			id = id;
 			
 			return;
@@ -77,16 +72,12 @@ class Profile {
 				index++;
 			}
 
-			print_array(key);
-			std::cout << '\n';
-			
 			return;
 		}
 
-		cookie parse_cookie(std::string cookie) {
+		void parse_cookie(std::string cookie) {
 			// Cookie Structure: email=foo&role=bar
 			// Skip '&' & '='
-			struct cookie parsed_cookie;
 			size_t index = 0;
 			bool passed_equals = false;
 			bool got_email = false;
@@ -100,21 +91,22 @@ class Profile {
 					}
 
 					if(passed_equals && !got_email) {
-						parsed_cookie.email += cookie[index];
+						email.push_back(cookie[index]);
 					}
 					
 					if (passed_equals && got_email) {
-						parsed_cookie.role += cookie[index];
+						role.push_back(cookie[index]);
 					}
 
 					if (cookie[index] == '=') passed_equals = true;
 					index++;
 				}
+
 			} else {
 				throw invalid_cookie_error("No Cookie Provided");
 			}
 			
-			return parsed_cookie;
+			return;
 		}
 };
 
@@ -141,12 +133,20 @@ class Profile {
 int main(void) {
     try {
 		std::string cookie = "email=hello@gmail.com&role=admin";
+		std::string cookie2 = "email=hello2@gmail.com&role=user";
 		
 		Profile my_profile;
 		my_profile.create(cookie);
 		print_array(my_profile.email);
+		std::cout<<'\n';
 		print_array(my_profile.role);
+		std::cout << '\n';
 
+		Profile my_profile2;
+		my_profile2.create(cookie2);
+		print_array(my_profile2.email);
+		std::cout<<'\n';
+		print_array(my_profile2.role);
 		
     } catch (const invalid_cookie_error& e) {
         std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
