@@ -10,7 +10,7 @@ std::vector<uint8_t> encrypt_plaintext(const std::vector<uint8_t> my_string, con
 
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
-    ciphertext = openssl::encrypt_ecb(ctx, complete_plaintext, key); // What we are attempting to decrypt
+    ciphertext = openssl::encrypt_ecb(ctx, complete_plaintext, &key); // What we are attempting to decrypt
 
     EVP_CIPHER_CTX_free(ctx);
 

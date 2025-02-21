@@ -1,8 +1,6 @@
 #include "../Deps/openssl.hpp"
 #include "utility.hpp"
 
-#define STACK_SIZE      1024
-
 class invalid_cookie_error : public std::exception {
     public:
         invalid_cookie_error(const std::string &message) : message_(message) {}
@@ -22,107 +20,134 @@ class invalid_email_error : public std::exception {
 };
 
 struct cookie {
-	int id;
-	std::vector<uint8_t> email;
-	std::vector<uint8_t> role;
+		std::string email;
+		std::string role;
 };
 
-std::map<std::string,std::string> parse_cookie(std::string cookie) {
-    std::map<std::string, std::string> user_dict;
-    //Cookie Structure: a=b & c=d
-    // If last symbol == '=' and current symbol == '&' error
-    std::string current_key;
-    std::string current_value;
-    size_t index = 0;
+class Profile {
+	public:
+		std::vector<uint8_t> email;
+		std::vector<uint8_t> role;
 
-    if (cookie.length() > 1) {
-		do {
-			while (cookie[index] != '=' && index < cookie.length()) {
-				current_key += cookie[index];
-				index++;
+		Profile() {
+			init_profile();
+		}
+
+		void create(std::string cookie) {
+			struct cookie parsed_cookie = parse_cookie(cookie);
+			std::vector<uint8_t> email_vec(parsed_cookie.email.begin(), parsed_cookie.email.end() - 1);
+			std::vector<uint8_t> role_vec(parsed_cookie.role.begin(), parsed_cookie.role.end() - 1);
+
+			for (size_t i = 0; i < email_vec.size(); i++) {
+				if (email_vec[i] == '&' || email_vec[i] == '=')
+					throw invalid_email_error("Invalid Character in Email");
 			}
 
-			if (index < cookie.length() || cookie[index] == '=') {
-				index++;
-			}
-
-			while (cookie[index] != '&' && index < cookie.length()) {
-				current_value += cookie[index];
-				index++;
+			for (size_t i = 0; i < role_vec.size(); i++) {
+				if (role_vec[i] == '&' || role_vec[i] == '=')
+					throw invalid_email_error("Invalid Character In role");
 			}
 			
-			if (index < cookie.length() && cookie[index] == '&') {
+			static int id = 1;
+			
+			id++;
+			
+			email = openssl::encrypt_ecb(ctx, email_vec, &key);
+			role = openssl::encrypt_ecb(ctx, role_vec, &key);
+			id = id;
+			
+			return;
+		}
+	
+	private:
+		EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+		inline static std::vector<uint8_t> key;
+		int id;
+
+		void init_profile() {
+			srand(time(0));
+
+			// Generate Random Key 
+			const char lookup_table[] = "abcdefghijlkmnopABCDEFGHIJKLMNOP";
+			char key_size = 16;
+			char index = 0;
+			while (index < key_size) {
+				uint8_t random_index = rand() % (sizeof(lookup_table) - 1);
+				key.push_back(lookup_table[random_index]);
 				index++;
 			}
 
-			user_dict[current_key] = current_value;
-			current_key.clear();
-			current_value.clear();
+			print_array(key);
+			std::cout << '\n';
+			
+			return;
+		}
 
-		} while (index < cookie.length());
+		cookie parse_cookie(std::string cookie) {
+			// Cookie Structure: email=foo&role=bar
+			// Skip '&' & '='
+			struct cookie parsed_cookie;
+			size_t index = 0;
+			bool passed_equals = false;
+			bool got_email = false;
+
+			if (cookie.length() > 1 ) {
+				while (index < cookie.length()) {
+					if (cookie[index] == '&') {
+						passed_equals = false;
+						got_email = true;
+						index++;
+					}
+
+					if(passed_equals && !got_email) {
+						parsed_cookie.email += cookie[index];
+					}
+					
+					if (passed_equals && got_email) {
+						parsed_cookie.role += cookie[index];
+					}
+
+					if (cookie[index] == '=') passed_equals = true;
+					index++;
+				}
+			} else {
+				throw invalid_cookie_error("No Cookie Provided");
+			}
+			
+			return parsed_cookie;
+		}
+};
+
+// Modify this function to get the blocksize that encrypt_cookie uses (16/32/64 etc...) 
+// This function should be made universal and added to attack.cpp, then re-compiled to attack.o 
+// and added to libcryptopals.a xoxo
+
+// int get_blocksize(const std::vector<uint8_t> plaintext) {
+//     int blocksize = 0;
+//     std::vector<uint8_t> my_string = {'0'}; // This is what we will use to pad the start of each text block we pass
+// 	// to the encryption function
+//     // std::vector<uint8_t> ciphertext = encrypt_plaintext(my_string, plaintext);
+//     std::vector<uint8_t> padded_ciphertext;
+
+//     do {
+//         padded_ciphertext = profile_for(my_string, plaintext);
+//         my_string.insert(my_string.end(), '0');
+//     } while (ciphertext.size() == padded_ciphertext.size());
+//     blocksize = padded_ciphertext.size() - ciphertext.size();
     
-    } else {
-        throw invalid_cookie_error("No Cookie Provided");
-    }
-
-    return user_dict;
-}
-
-cookie profile_for(std::string email, std::string role) {
-	std::vector<uint8_t> email_vec(email.begin(), email.end() - 1);
-	std::vector<uint8_t> role_vec(role.begin(), role.end() - 1);
-
-	for (size_t i = 0; i < email.size(); i++) {
-		if (email[i] == '&' || email[i] == '=')
-			throw invalid_email_error("Invalid Character in Role");
-	}
-
-	for (size_t i = 0; i < role.size(); i++) {
-		if (role[i] == '&' || role[i] == '=')
-			throw invalid_email_error("Invalid Character In Email");
-	}
-	
-	static int id = 1;
-	cookie my_cookie = {id, email_vec, role_vec};
-	id++;
-	return my_cookie;
-}
-
-void encrypt_cookie(cookie &plain_cookie, EVP_CIPHER_CTX *ctx, std::vector<u_int8_t> key) {
-	plain_cookie.email = openssl::encrypt_ecb(ctx, plain_cookie.email, key);
-	plain_cookie.role = openssl::encrypt_ecb(ctx, plain_cookie.role, key);
-	return;
-}
+//     return blocksize;
+// }
 
 int main(void) {
     try {
-		srand(time(0));
-		EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+		std::string cookie = "email=hello@gmail.com&role=admin";
+		
+		Profile my_profile;
+		my_profile.create(cookie);
+		print_array(my_profile.email);
+		print_array(my_profile.role);
 
-		const char lookup_table[] = "abcdefghijlkmnopABCDEFGHIJKLMNOP";
-		char key_size = 16;
-		char index = 0;
-
-		std::vector<uint8_t> key;
-		while (index < key_size) {
-			uint8_t random_index = rand() % sizeof(lookup_table) / sizeof(char);
-			key.push_back(lookup_table[random_index]);
-			index++;
-		}
-
-		cookie my_cookie = profile_for("hello@gmail.com", "admin");
-		//cookie my_cookie2 = profile_for("hello@gmail.com", "admin"); // Only here for testing
-		//cookie my_cookie2 = profile_for("hello2@gmail.com", "user");
-
-		encrypt_cookie(my_cookie, ctx, key);
-		//encrypt_cookie(my_cookie2, ctx, key);
-
-		print_array(my_cookie.email);
-		std::cout << '\n';
-		print_array(my_cookie.role);
-		std::cout << '\n';
-
-
+		
     } catch (const invalid_cookie_error& e) {
         std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
     } catch (const invalid_email_error& e) {
@@ -130,5 +155,6 @@ int main(void) {
 	} catch (const std::exception& e) {
         std::cerr << "General Exception: " << e.what() << '\n';
 	}
+
     return 0;
 }

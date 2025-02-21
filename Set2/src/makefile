@@ -2,7 +2,7 @@
 CC = g++
 DEPS_DIR = ../../Deps/
 LIB_DIR = $(DEPS_DIR)target/
-CFLAGS = -g -std=c++14 -Wall -I$(DEPS_DIR) -D_GLIBCXX_USE_CXX11_ABI=1
+CFLAGS = -g -std=c++17 -Wall -I$(DEPS_DIR) -D_GLIBCXX_USE_CXX11_ABI=1
 # Output Directory 
 OUTPUT_DIR = ../target/
 

@@ -2,8 +2,8 @@
 #include "openssl.hpp"
 #include "encrypting.hpp"
 
-std::vector<uint8_t> openssl::encrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector<uint8_t> plaintext, const std::vector<uint8_t> key) {
-    if (EVP_EncryptInit(ctx, EVP_aes_128_ecb(), key.data(), NULL) != 1)
+std::vector<uint8_t> openssl::encrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector<uint8_t> plaintext, const std::vector<uint8_t> *key) {
+    if (EVP_EncryptInit(ctx, EVP_aes_128_ecb(), key->data(), NULL) != 1)
         throw std::runtime_error("Error Initalising Encryption Engine.");
 
     std::vector<uint8_t> ciphertext(plaintext.size() + EVP_CIPHER_CTX_block_size(ctx));
@@ -23,7 +23,7 @@ std::vector<uint8_t> openssl::encrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector
     return ciphertext;
 }
 
-std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> plaintext, const std::vector<uint8_t> iv, const std::vector<uint8_t> key) {
+std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> plaintext, const std::vector<uint8_t> iv, const std::vector<uint8_t> *key) {
     std::vector<uint8_t> ciphertext;
     std::vector<std::vector<uint8_t>> blocks = create_blocks(plaintext);
     std::vector<uint8_t> xored_blocks;
