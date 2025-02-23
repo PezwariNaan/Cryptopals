@@ -85,11 +85,7 @@ inline const std::vector<uint8_t> read_file_bytes(const std::string &file_name) 
     return buffer;
 }
 
-inline const std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext) {
-    #ifndef BLOCKSIZE
-    #define BLOCKSIZE 16
-    #endif 
-    
+inline const std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext, int BLOCKSIZE) {
     std::vector<std::vector<uint8_t>> block_vector; // All blocks
     size_t i = 0;
     for (; i + BLOCKSIZE <= plaintext.size(); i += BLOCKSIZE)

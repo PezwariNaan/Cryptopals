@@ -32,9 +32,9 @@ int get_blocksize(const std::vector<uint8_t> plaintext) {
     return blocksize;
 }
 
-std::string ecb_cbc_oracle(std::vector<uint8_t> ciphertext) {
+std::string ecb_cbc_oracle(std::vector<uint8_t> ciphertext, int blocksize) {
     // Detect ECB
-    std::vector<std::vector<uint8_t>> blocks = create_blocks(ciphertext);
+    std::vector<std::vector<uint8_t>> blocks = create_blocks(ciphertext, blocksize);
     for (size_t i = 0; i < blocks.size(); i++) {
         for (size_t j = i + 1; j < blocks.size(); j++) {
             if (blocks[i] == blocks[j]) {
@@ -50,7 +50,7 @@ std::string detect_ecb(const std::vector<uint8_t> plaintext, const int blocksize
     std::vector<uint8_t> padding(blocksize * 3, '0'); // Add enough bytes to ensure repeating block if using ECB
 
     std::vector<uint8_t> ciphertext = encrypt_plaintext(padding, plaintext);
-    std::string mode = ecb_cbc_oracle(ciphertext);
+    std::string mode = ecb_cbc_oracle(ciphertext, blocksize);
     return mode;
 }
 
