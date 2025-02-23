@@ -1,6 +1,8 @@
 #include "../Deps/openssl.hpp"
 #include "utility.hpp"
 
+#define MAP std::map<std::string, std::vector<uint8_t>>
+
 class invalid_cookie_error : public std::exception {
     public:
         invalid_cookie_error(const std::string &message) : message_(message) {}
@@ -28,7 +30,7 @@ class Profile {
 			init_profile();
 		}
 
-		void create(std::string cookie) {
+		std::map<std::string, std::vector<uint8_t>> create(std::string cookie) {
 			parse_cookie(cookie);
 			std::vector<uint8_t> temp_email = email;
 			std::vector<uint8_t> temp_role = role;
@@ -47,11 +49,12 @@ class Profile {
 			
 			id++;
 			
-			email = openssl::encrypt_ecb(ctx, temp_email, &key);
-			role = openssl::encrypt_ecb(ctx, temp_role, &key);
+			temp_email = openssl::encrypt_ecb(ctx, email, &key);
+			temp_role = openssl::encrypt_ecb(ctx, role, &key);
 			id = id;
-			
-			return;
+			std::map<std::string, std::vector<uint8_t>> profile_details{{"Email", temp_email}, {"Role", temp_role}};
+
+			return profile_details;
 		}
 	
 	private:
@@ -66,6 +69,7 @@ class Profile {
 			const char lookup_table[] = "abcdefghijlkmnopABCDEFGHIJKLMNOP";
 			char key_size = 16;
 			char index = 0;
+
 			while (index < key_size) {
 				uint8_t random_index = rand() % (sizeof(lookup_table) - 1);
 				key.push_back(lookup_table[random_index]);
@@ -78,6 +82,8 @@ class Profile {
 		void parse_cookie(std::string cookie) {
 			// Cookie Structure: email=foo&role=bar
 			// Skip '&' & '='
+			email.clear();
+			role.clear();
 			size_t index = 0;
 			bool passed_equals = false;
 			bool got_email = false;
@@ -110,51 +116,63 @@ class Profile {
 		}
 };
 
+void print_user_details(MAP user_details) {
+	auto iter = user_details.begin();
+
+	while (iter != user_details.end()) {
+		std::cout << iter->first << '\n';
+		print_array(iter->second);
+		std::cout << '\n';
+		iter++;
+	}
+
+	return;
+}
+// Code Breaking Part (Finally Lol!)
 // Modify this function to get the blocksize that encrypt_cookie uses (16/32/64 etc...) 
 // This function should be made universal and added to attack.cpp, then re-compiled to attack.o 
 // and added to libcryptopals.a xoxo
 
-// int get_blocksize(const std::vector<uint8_t> plaintext) {
-//     int blocksize = 0;
-//     std::vector<uint8_t> my_string = {'0'}; // This is what we will use to pad the start of each text block we pass
-// 	// to the encryption function
-//     // std::vector<uint8_t> ciphertext = encrypt_plaintext(my_string, plaintext);
-//     std::vector<uint8_t> padded_ciphertext;
+int get_blocksize(const std::string plaintext, std::function<MAP(std::string)> encryption_function) {
+    static int padding = 1;
+	MAP base_object = encryption_function(plaintext);
+	int base_length = base_object.begin()->second.size();
 
-//     do {
-//         padded_ciphertext = profile_for(my_string, plaintext);
-//         my_string.insert(my_string.end(), '0');
-//     } while (ciphertext.size() == padded_ciphertext.size());
-//     blocksize = padded_ciphertext.size() - ciphertext.size();
-    
-//     return blocksize;
-// }
+	while (true) {
+		std::string padded_plaintext = plaintext;
+		padded_plaintext.insert(6, padding, '0');
+		MAP ciphertext_object = encryption_function(padded_plaintext);
+		int current_length = ciphertext_object.begin()->second.size();
+		if (current_length != base_length){
+			return current_length - base_length;
+		}
+
+		padding++;
+	}
+
+}
 
 int main(void) {
     try {
-		std::string cookie = "email=hello@gmail.com&role=admin";
-		std::string cookie2 = "email=hello2@gmail.com&role=user";
-		
-		Profile my_profile;
-		my_profile.create(cookie);
-		print_array(my_profile.email);
-		std::cout<<'\n';
-		print_array(my_profile.role);
-		std::cout << '\n';
+		std::string hacker_cookie = "email=hacker@hacker.hacked&role=user";
 
-		Profile my_profile2;
-		my_profile2.create(cookie2);
-		print_array(my_profile2.email);
-		std::cout<<'\n';
-		print_array(my_profile2.role);
+		int blocksize = 0;
+		while (blocksize == 0) {
+			Profile my_profile;
+			blocksize = get_blocksize(hacker_cookie, std::bind(&Profile::create, &my_profile, std::placeholders::_1));
+		}
+
+		std::cout << "Blocksize: " << blocksize << '\n';
+		return 0;
 		
     } catch (const invalid_cookie_error& e) {
         std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
+		return 1;
     } catch (const invalid_email_error& e) {
 		std::cerr << "Email Error: " << e.what() << '\n';
+		return 2;
 	} catch (const std::exception& e) {
         std::cerr << "General Exception: " << e.what() << '\n';
+		return 3;
 	}
-
-    return 0;
 }

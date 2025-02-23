@@ -1,6 +1,7 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
+// Includes all of header needed for h4ck1ng
 #include <cstddef>
 #include <sys/types.h>
 #include <vector>
@@ -11,6 +12,7 @@
 #include <sstream>
 #include <map>
 #include <string>
+#include <functional>
 
 // Declarations
 void print_array(std::vector<uint8_t> array);

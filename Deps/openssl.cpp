@@ -41,16 +41,3 @@ std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, std::vector<uint8
     return ciphertext;
 }
 
-std::string openssl::ecb_cbc_oracle(std::vector<uint8_t> ciphertext) {
-    // Detect ECB
-    std::vector<std::vector<uint8_t>> blocks = create_blocks(ciphertext);
-    for (size_t i = 0; i < blocks.size(); i++) {
-        for (size_t j = i + 1; j < blocks.size(); j++) {
-            if (blocks[i] == blocks[j]) {
-                return "ECB";
-            }
-        }
-    }
-    // Else CBC
-    return "CBC";
-}

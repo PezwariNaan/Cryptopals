@@ -9,6 +9,7 @@ namespace attack {
     int get_blocksize(const std::vector<uint8_t> plaintext);
     std::string detect_ecb(const std::vector<uint8_t> plaintext, const int blocksize);
     std::vector<uint8_t> attack_ecb(std::vector<uint8_t> plaintext, int blocksize);
+    std::string ecb_cbc_oracle(std::vector<uint8_t> ciphertext);
 }
 
 #endif
