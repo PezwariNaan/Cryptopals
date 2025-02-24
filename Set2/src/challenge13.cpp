@@ -1,274 +1,142 @@
-#include "../Deps/openssl.hpp"
 #include "utility.hpp"
+#include "openssl.hpp"
 #include <cstdint>
-#include <exception>
+#include <openssl/evp.h>
+#include <sys/types.h>
+#include <vector>
 
-#define MAP std::map<std::string, std::vector<uint8_t>>
-#define CALLBACK std::bind(&Profile::create, &hacker_profile, std::placeholders::_1)
+#define MAP std::map<std::string, std::string>
+#define BYTES std::vector<uint8_t>
+// Parse Cookie
+// A=B&C=D
+void get_words(MAP *user_profile, size_t start, const std::string &cookie) {
+	if (start >= cookie.length()) {return;}
 
-class invalid_cookie_error : public std::exception {
-    public:
-        invalid_cookie_error(const std::string &message) : message_(message) {}
-        const char* what() const throw() {return message_.c_str();}
+	size_t pair_delim = cookie.find('=', start);
+	if (pair_delim == std::string::npos) {return;};
 
-    private:
-        std::string message_;
-};
+	size_t pair_end = cookie.find('&', pair_delim);
 
-class invalid_email_error : public std::exception {
-	public:
-		invalid_email_error(const std::string &message) : message_(message) {}
-		const char* what() const throw() {return message_.c_str();}
+	std::string key = cookie.substr(start, pair_delim - start);
+	std::string value = (pair_end == std::string::npos) ? 
+							cookie.substr(pair_delim + 1) :
+							cookie.substr(pair_delim + 1, pair_end - pair_delim - 1);
 
-	private:
-		std::string message_;
-};
+	(*user_profile)[key] = value;
+	if (pair_end != std::string::npos)
+		get_words(user_profile, pair_end + 1, cookie); // Recursion yay!
+}
 
-class decryption_error : public std::exception {
-	public:
-		decryption_error(const std::string &message) : message_(message)	 {}
-		const char* what() const throw() {return message_.c_str();}
-	
-	private:
-		std::string message_;
-};
+MAP parse_cookie(std::string cookie) {
+	MAP user_profile;
+	size_t start = 0;
+	get_words(&user_profile, start, cookie);
+	return user_profile;
+}
 
-class Profile {
-	public:
-		std::vector<uint8_t> email;
-		std::vector<uint8_t> role;
+MAP profile_for(std::string email) {
+	std::string role = "user";
+	std::string id = "17";
+	MAP profile;
+	profile["role"] = role;
+	profile["id"] = id;
+	profile["email"] = email;
 
-		Profile() {
-			init_profile();
-		}
+	return profile;
+}
 
-		std::map<std::string, std::vector<uint8_t>> create(std::string cookie) {
-			parse_cookie(cookie);
-			std::vector<uint8_t> temp_email = email;
-			std::vector<uint8_t> temp_role = role;
+std::string encode_profile(MAP profile) {
+	std::string encoded_profile;
+	encoded_profile += "email=";
+	encoded_profile += profile["email"];
+	encoded_profile += '&';
 
-			for (size_t i = 0; i < email.size(); i++) {
-				if (email[i] == '&' || email[i] == '=')
-					throw invalid_email_error("Invalid Character in Email");
-			}
+	encoded_profile += "id=";
+	encoded_profile += profile["id"];
+	encoded_profile += '&';
 
-			for (size_t i = 0; i < role.size(); i++) {
-				if (role[i] == '&' || role[i] == '=')
-					throw invalid_email_error("Invalid Character In role");
-			}
-			
-			static int id = 1;
-			
-			id++;
-			
-			temp_email = openssl::encrypt_ecb(ctx, email, &key);
-			temp_role = openssl::encrypt_ecb(ctx, role, &key);
-			id = id;
-			std::map<std::string, std::vector<uint8_t>> profile_details{{"Email", temp_email}, {"Role", temp_role}};
+	encoded_profile += "role=";
+	encoded_profile += profile["role"];
 
-			return profile_details;
-		}
-	
-	private:
-		EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-		inline static std::vector<uint8_t> key;
-		int id;
+	return encoded_profile;
+}
 
-		void init_profile() {
-			srand(time(0));
+std::vector<uint8_t> encrypt_profile(std::string profile_str, BYTES key) {
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+	std::vector<uint8_t> profile_vec(profile_str.begin(), profile_str.end());
+	std::vector<uint8_t> ciphertext = openssl::encrypt_ecb(ctx, profile_vec, &key);
 
-			// Generate Random Key 
-			const char lookup_table[] = "abcdefghijlkmnopABCDEFGHIJKLMNOP";
-			char key_size = 16;
-			char index = 0;
+	return ciphertext;
+}
 
-			while (index < key_size) {
-				uint8_t random_index = rand() % (sizeof(lookup_table) - 1);
-				key.push_back(lookup_table[random_index]);
-				index++;
-			}
+std::vector<uint8_t> decrypt_ecb (std::vector<uint8_t> ciphertext, const std::vector<uint8_t> *key) {
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
-			return;
-		}
+    if (EVP_DecryptInit(ctx, EVP_aes_128_ecb(), key->data(), NULL) != 1)
+        throw std::runtime_error("Error Initalising Decryption Engine.");
 
-		void parse_cookie(std::string cookie) {
-			// Cookie Structure: email=foo&role=bar
-			// Skip '&' & '='
-			email.clear();
-			role.clear();
-			size_t index = 0;
-			bool passed_equals = false;
-			bool got_email = false;
+    std::vector<uint8_t> plaintext(ciphertext.size() + EVP_CIPHER_CTX_block_size(ctx));
+    int plaintext_len = 0;
+    int len = 0;
 
-			if (cookie.length() > 1 ) {
-				while (index < cookie.length()) {
-					if (cookie[index] == '&') {
-						passed_equals = false;
-						got_email = true;
-						index++;
-					}
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size()) != 1)
+        throw std::runtime_error("Error With ECB Decryption."); 
+    plaintext_len = len;
 
-					if(passed_equals && !got_email) {
-						email.push_back(cookie[index]);
-					}
-					
-					if (passed_equals && got_email) {
-						role.push_back(cookie[index]);
-					}
+    if (EVP_DecryptFinal(ctx, plaintext.data() + plaintext_len, &len) != 1)
+        throw std::runtime_error("Error With ECB Decryption (Final Step).");
+    plaintext_len += len;
+    
+    plaintext.resize(plaintext_len);
+    
+    return plaintext;
+}
 
-					if (cookie[index] == '=') passed_equals = true;
-					index++;
-				}
-
-			} else {
-				throw invalid_cookie_error("No Cookie Provided");
-			}
-			
-			return;
-		}
-};
-
-void print_user_details(MAP user_details) {
-	auto iter = user_details.begin();
-
-	while (iter != user_details.end()) {
-		std::cout << iter->first << '\n';
-		print_array(iter->second);
-		std::cout << '\n';
+void print_user(MAP user) {
+	auto iter = user.begin();
+	while (iter != user.end()) {
+		std::cout << iter->first << " : " << iter->second << '\n';
 		iter++;
 	}
 
 	return;
 }
-// Code Breaking Part (Finally Lol!)
-// Modify this function to get the blocksize that encrypt_cookie uses (16/32/64 etc...) 
-// This function should be made universal and added to attack.cpp, then re-compiled to attack.o 
-// and added to libcryptopals.a xoxo
 
-int get_blocksize(const std::string plaintext, std::function<MAP(std::string)> encryption_function) {
-    static int padding = 1;
-	MAP base_object = encryption_function(plaintext);
-	int base_length = base_object.begin()->second.size();
-
-	while (true) {
-		std::string padded_plaintext = plaintext;
-		padded_plaintext.insert(6, padding, '0');
-		MAP ciphertext_object = encryption_function(padded_plaintext);
-		int current_length = ciphertext_object.begin()->second.size();
-		if (current_length != base_length){
-			return current_length - base_length;
-		}
-
-		padding++;
-	}
-
+std::string pkcs_padding(const std::string &input, size_t blocksize) {
+	size_t pad = blocksize - ((input.size()) % blocksize);
+	return input + std::string(pad, static_cast<char>(pad));
 }
 
-std::string ecb_cbc_oracle(std::vector<uint8_t> ciphertext, int blocksize) {
-    // Detect ECB
-    std::vector<std::vector<uint8_t>> blocks = create_blocks(ciphertext, blocksize);
-    for (size_t i = 0; i < blocks.size(); i++) {
-        for (size_t j = i + 1; j < blocks.size(); j++) {
-            if (blocks[i] == blocks[j]) {
-                return "ECB";
-            }
-        }
-    }
-    // Else CBC
-    return "CBC";
-}
-
-std::vector<uint8_t> attack_ecb(std::vector<uint8_t> ciphertext, int blocksize, std::function<MAP(std::string)> encryption_function) {
-	int ciphertext_length = ciphertext.size();
-	int total_blocks = ciphertext_length / blocksize; // Ciphertext must be some multiple of *blocksize*
-	int block_index = 0; 
-	std::vector<uint8_t> decrypted_bytes = {};
-
-for (;block_index < total_blocks; block_index++ ) {
-
-		for (int byte_index = 0; byte_index < blocksize; byte_index++) {
-			int padding = blocksize - ((decrypted_bytes.size() + 1) % blocksize);
-			bool match = false;
-
-			for (int i = 0; i < 255; i++) {
-
-				// Create a block of blocksize * character we want to test
-				std::string test_block(blocksize, i);
-				MAP encrypted_testblock_object = encryption_function(test_block);
-
-				// Pad original ciphertext & testblock
-				std::vector<uint8_t> padded_ciphertext = ciphertext;
-				std::vector<uint8_t> padded_testblock = encrypted_testblock_object.begin() ->second;
-				padded_ciphertext.insert(padded_ciphertext.begin(), padding, '0');
-				padded_testblock.insert(padded_testblock.begin(), padding, '0');
-				
-				// Encrypt them again
-				std::string padded_ciphertext_str(padded_ciphertext.begin(), padded_ciphertext.end());
-				std::string padded_testblock_str(padded_testblock.begin(), padded_testblock.end());
-
-				MAP encrypted_padded_ciphertext = encryption_function(padded_ciphertext_str);
-				MAP encrypted_padded_testblock = encryption_function(padded_testblock_str);
-
-				// If they match we know which character has been encrypted
-				if (encrypted_padded_ciphertext.begin()->second == encrypted_padded_testblock.begin()->second) {
-					decrypted_bytes.push_back(i);
-					match = true;
-					break;
-				}
-			}
-			if (!match) {
-				throw decryption_error("Could Not Match Byte");
-			}
-		}
-	}
-
-	return decrypted_bytes;
+// email=hack@gmail.com&id=17&role=user
+// email=aaaaaaaaaadmin&id=17&role=user% 
+std::vector<uint8_t> cut_and_paste(BYTES key) {
+	std::string user2_str = "admin";
+	user2_str = pkcs_padding(user2_str, 16);
+	MAP user1 = profile_for("hack@gmail.com");
+	MAP user2 = profile_for("AAAAAAAAAA"+user2_str);
+	std::string profile1 = encode_profile(user1);
+	std::string profile2 = encode_profile(user2);
+	BYTES encrytped1 = encrypt_profile(profile1, key);
+	BYTES encrytped2 = encrypt_profile(profile2, key);
+	encrytped1.resize(32);
+	encrytped1.insert(encrytped1.end(), encrytped2.begin() + 16, encrytped2.begin() + 32);
+	
+	return encrytped1;
 }
 
 int main(void) {
-    try {
-		std::string hacker_cookie = "email=hacker@hacker.hacked&role=user";
-		int blocksize = 0;
+	std::string key_str = "YELLOW SUBMARINE";
+	std::vector<uint8_t> const key(key_str.begin(), key_str.end());
+	std::vector<uint8_t> ciphertext = cut_and_paste(key);
 
-		// A while loop is not necessary; however better simulates the client, server relationship 
-		// Each call is a new profile
-		while (blocksize == 0) {
-			Profile my_profile;
-			blocksize = get_blocksize(hacker_cookie, std::bind(&Profile::create, &my_profile, std::placeholders::_1));
-		}
-
-		// Padd the plaintext with 3 * blocksize '0's to ensure that we have repeating blocks if it is ECB
-		std::string padded_hacker_cookie = "email=&hacker@hacker.hackedrole=user";
-		padded_hacker_cookie.insert(6, blocksize * 3, '0');
-		Profile hacker_profile;
-		MAP hacker_details = hacker_profile.create(padded_hacker_cookie);
-		std::vector<uint8_t> hacker_ciphertext = hacker_details.begin()->second;
-		std::string mode = ecb_cbc_oracle(hacker_details.begin()->second, blocksize);
-		
-		if (mode == "ECB") {
-			std::vector<uint8_t> decrypted_bytes = attack_ecb(hacker_ciphertext, blocksize, CALLBACK);
-			print_array(decrypted_bytes);
-			std::cout << '\n';
-			
-			return 0;
-
-		} else {
-			std::cerr << "Not ECB, Can't Attack\n";
-			return 1;
-		}
-		
-    } catch (const invalid_cookie_error &e) {
-        std::cerr << "Invalid Cookie Error: " << e.what() << '\n';
-		return 2;
-    } catch (const invalid_email_error &e) {
-		std::cerr << "Email Error: " << e.what() << '\n';
-		return 3;
-		} catch (const decryption_error &e) {
-		std::cerr << "Decryption Error: " << e.what() << '\n';
-		return 4;
-	} catch (const std::exception &e) {
-        std::cerr << "General Exception: " << e.what() << '\n';
-		return 5;
-	}
-
+	// MAP profile = profile_for("hello@gmail.com");
+	// std::string encoded = encode_profile(profile);
+	// std::vector<uint8_t> encoded_vec(encoded.begin(), encoded.end());
+	// std::vector<uint8_t> ciphertext = openssl::encrypt_ecb(ctx, encoded_vec, &key);
+	// print_array(ciphertext);
+	// std::cout << '\n';
+	std::vector plaintext = decrypt_ecb(ciphertext, &key);
+	print_array(plaintext);
+	std::cout << '\n';
+	return 0;
 }
