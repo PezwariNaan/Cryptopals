@@ -1,15 +1,41 @@
 #include "encoding.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <stdexcept>
+#include <exception>
 #include <sys/types.h>
 
-#define PY_SSIZE_T_CLEAN
-#include <python3.13/Python.h>
+#ifndef BASE64PAD
+#define BASE64PAD '='
+#endif 
+
+DecodeError::DecodeError(const std::string &msg) : message_(msg) {}
+
+const char*  DecodeError::what() const noexcept {
+    return message_.c_str();
+}
+
+constexpr uint8_t b64de_table[256] = {
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255, 62, 255,255,255, 63,
+    52 , 53, 54, 55,  56, 57, 58, 59,  60, 61,255,255, 255,  0,255,255,
+
+    255,  0,  1,  2,   3,  4,  5,  6,   7,  8,  9, 10,  11, 12, 13, 14,
+    15 , 16, 17, 18,  19, 20, 21, 22,  23, 24, 25,255, 255,255,255,255,
+    255, 26, 27, 28,  29, 30, 31, 32,  33, 34, 35, 36,  37, 38, 39, 40,
+    41 , 42, 43, 44,  45, 46, 47, 48,  49, 50, 51,255, 255,255,255,255,
+
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255};
 
 std::string cp::base64_encode(const std::vector<uint8_t> &input) {
-	const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
 	std::string b64_string;
 	int input_len = input.size();
 	if (input_len <= 0) return "No Input";
@@ -18,22 +44,22 @@ std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	int b64_length = std::floor((input_len + 2) / 3) * 4;
 	b64_string.reserve(b64_length);
 
-	// main converstion logic
+	// main convertion logic
 	for (int i = 0; i < input_len; i += 3) {
 		uint8_t byte1 = input[i];
 		uint8_t byte2 = (i + 1 < input_len) ? input[i + 1] : 0;
 		uint8_t byte3 = (i + 2 < input_len) ? input[i + 2] : 0;
 		
-		// Get first 6 bit
-		b64_string.push_back(b64_lookup_table[byte1 >> 2]);
+		// Get first 6 bits
+		b64_string.push_back(b64de_table[byte1 >> 2]);
 		// Append previous 2 bytes to next 4
 		// Use bitwise AND to get relevant bit§.
 		// Use bitwise OR to create new 6 bit value
-		b64_string.push_back(b64_lookup_table[((byte1 & 0x03) << 4) | (byte2 >> 4)]);
+		b64_string.push_back(b64de_table[((byte1 & 0x03) << 4) | (byte2 >> 4)]);
 		// Repeat previous step
-		b64_string.push_back(b64_lookup_table[((byte2 & 0x0F) << 2) | (byte3 >> 6)]);
+		b64_string.push_back(b64de_table[((byte2 & 0x0F) << 2) | (byte3 >> 6)]);
 		// get last 6 bits with bitwise AND
-		b64_string.push_back(b64_lookup_table[byte3 & 0x3F]);
+		b64_string.push_back(b64de_table[byte3 & 0x3F]);
 	}
 
 	int padding = input_len % 3;
@@ -46,103 +72,129 @@ std::string cp::base64_encode(const std::vector<uint8_t> &input) {
 	return b64_string;
 }
 
-std::vector<uint8_t> cp::base64_decode(const std::vector<uint8_t> &input) {
-    const std::string b64_lookup_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::vector<uint8_t> byte_array;
-
-    // Precompute a reverse lookup table for Base64 characters
-    std::vector<int> lookup_table(256, -1);
-    for (size_t i = 0; i < b64_lookup_table.size(); i++) {
-        lookup_table[b64_lookup_table[i]] = i;
-    }
-
-    int input_len = input.size();
-    
-    // Process input in blocks of 4 Base64 characters
-    for (int i = 0; i < input_len; i += 4) {
-        // Check for padding and make sure we don't go out of bounds
-        int first_char_index  = lookup_table[static_cast<uint8_t>(input[i])];
-        int second_char_index = lookup_table[static_cast<uint8_t>(input[i + 1])];
-        int third_char_index  = (i + 2 < input_len && input[i + 2] != '=') ? lookup_table[static_cast<uint8_t>(input[i + 2])] : 0;
-        int fourth_char_index = (i + 3 < input_len && input[i + 3] != '=') ? lookup_table[static_cast<uint8_t>(input[i + 3])] : 0;
-
-        // Decode
-        uint8_t byte1 = (first_char_index << 2) | (second_char_index >> 4);
-        byte_array.push_back(byte1);
-        
-        if (i + 2 < input_len && input[i + 2] != '=') {
-            uint8_t byte2 = ((second_char_index & 0x0F) << 4) | (third_char_index >> 2);
-            byte_array.push_back(byte2);
-        }
-        
-        if (i + 3 < input_len && input[i + 3] != '=') {
-            uint8_t byte3 = ((third_char_index & 0x03) << 6) | fourth_char_index;
-            byte_array.push_back(byte3);
-        }
-    }
-    
-    return byte_array;
+int b64_to_char(char c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
 }
 
-std::vector<uint8_t> cp::py_base64decode(const std::string filename, const char *argv) {
-    std::vector<uint8_t> b64_vector;
+uint8_t* cp::b64_decode(const std::string buffer, size_t &length, bool strict_mode) {
+    std::string error_message;
 
-    PyStatus status;
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+    const uint8_t *ascii_data = (const uint8_t *)buffer.data();
+    size_t ascii_len = length;
+    bool padding_started = 0;
 
-    /* optional but recommended */
-    status = PyConfig_SetBytesString(&config, &config.program_name, &argv[0]);
-    if (PyStatus_Exception(status)) {
-        PyConfig_Clear(&config);  // Clear on error
-        Py_ExitStatusException(status);
+    size_t bin_len = ascii_len / 4 * 3; 
+    uint8_t *bin_data = new (std::nothrow) uint8_t[bin_len + 1];
+    if(!bin_data) {
+        throw std::runtime_error("Failed to allocate memory for bin_data.");
+    }
+    uint8_t *bin_data_start = bin_data;
+    bin_data[bin_len] = 0x0;
+
+    uint8_t leftchar = 0;
+    uint32_t quad_pos = 0;
+    uint32_t pads = 0;
+
+    if(strict_mode && (ascii_len > 0) && (*ascii_data == BASE64PAD)) {
+        error_message = "Leading padding not allowed.";
+        goto error_end;
     }
 
-    /* Initialize the Python interpreter with the config */
-    status = Py_InitializeFromConfig(&config);
-    if (PyStatus_Exception(status)) {
-        PyConfig_Clear(&config);  // Clear on error
-        Py_ExitStatusException(status);
-    }
+    size_t i;
+    uint8_t this_ch;
+    for(i = 0; i < ascii_len; ++i) {
+        this_ch = ascii_data[i];
 
-    /* Clear the config after initialization */
-    PyConfig_Clear(&config);
+        if(this_ch == BASE64PAD) {
+            padding_started = true;
+            // If the current character is a padding character, the length
+            // will be reduced by one to obtain the decoded true length.
+            bin_len--;
 
-    /* Base64 decode selected string using Python */
-    char code[1024];
-    snprintf(code, sizeof(code), 
-    "from base64 import b64decode\n"
-    "with open('%s', 'rb') as file:\n"
-    "\tlines = b' '.join(file.readlines())\n"
-    "\tb64_decoded = b64decode(lines)\n", filename.data());
+            if(strict_mode && (!quad_pos)) {
+                error_message = "Excess padding not allowed.";
+                goto error_end;
+            }
 
-    PyRun_SimpleString(code);
+            if((quad_pos >= 2) && (quad_pos + (++pads) >= 4)) {
 
-    /* Initalise python 'main' & access the global dictionary */
-    PyObject *main_module = PyImport_AddModule("__main__");
-    PyObject *global_dict = PyModule_GetDict(main_module);
+                if(strict_mode && ((i + 1) < ascii_len)) {
+                    error_message = "Excess data after padding.";
+                    goto error_end;
+                }
 
-    PyObject *ptr_b64decoded = PyDict_GetItemString(global_dict, "b64_decoded");
+                goto done;
+            }
 
-    if (ptr_b64decoded) {
-        if (PyBytes_Check(ptr_b64decoded)) {
-            Py_ssize_t size = PyBytes_GET_SIZE(ptr_b64decoded);
-            uint8_t *data = reinterpret_cast<uint8_t*>(PyBytes_AS_STRING(ptr_b64decoded));
-            b64_vector.assign(data, data + size);
-
-        } else {
-            throw std::runtime_error("Error: 'b64_decoded' is not of type bytes.");
+            continue;
         }
-    } else {
-        throw std::runtime_error("Error: Variable 'b64_decoded' not found in Global Dictionary.");
+
+        this_ch = b64de_table[this_ch];
+        if(this_ch == 255) {
+            if(strict_mode) {
+                error_message = "Only base64 data is allowed.";
+                goto error_end;
+            }
+            continue;
+        }
+
+        if(strict_mode && padding_started) {
+            error_message = "Discontinuous padding not allowed.";
+            goto error_end;
+        }
+
+        pads = 0;
+
+        switch(quad_pos) {
+        case 0:
+            quad_pos = 1;
+            leftchar = this_ch;
+            break;
+        case 1:
+            quad_pos = 2;
+            *bin_data++ = (leftchar << 2) | (this_ch >> 4);
+            leftchar = this_ch & 0xf;
+            break;
+        case 2:
+            quad_pos = 3;
+            *bin_data++ = (leftchar << 4) | (this_ch >> 2);
+            leftchar = this_ch & 0x3;
+            break;
+        case 3:
+            quad_pos = 0;
+            *bin_data++ = (leftchar << 6) | (this_ch);
+            leftchar = 0;
+            break;
+        }
     }
 
-    /* Finalize the Python interpreter */
-    if (Py_FinalizeEx() < 0) {
-        exit(120);
+    if(quad_pos) {
+        if(quad_pos == 1) {
+            char tmpMsg[128]{};
+            snprintf(tmpMsg, sizeof(tmpMsg),
+                    "Invalid base64-encoded string: "
+                    "number of data characters (%zd) cannot be 1 more "
+                    "than a multiple of 4",
+                    (bin_data - bin_data_start) / 3 * 4 + 1);
+            error_message = tmpMsg;
+            goto error_end;
+        } else {
+            error_message = "Incorrect padding.";
+            goto error_end;
+        }
+        error_end:
+        delete[] bin_data;
+        throw std::runtime_error(error_message);
     }
 
-    return b64_vector;
+    done:
+    length = bin_data - bin_data_start;
+    return bin_data_start;
 }
 
 std::vector<uint8_t> cp::hex_decode(const std::vector<uint8_t> &input) {

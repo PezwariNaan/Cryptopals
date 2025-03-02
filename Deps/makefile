@@ -7,7 +7,7 @@ TARGET_DIR = target
 LIBRARY = $(TARGET_DIR)/libcryptopals.a
 
 # Source and object files
-SOURCES = encoding.cpp encrypting.cpp openssl.cpp attack.cpp
+SOURCES = encoding.cpp encrypting.cpp openssl.cpp
 OBJECTS = $(SOURCES:%.cpp=$(TARGET_DIR)/%.o)
 
 # Default target

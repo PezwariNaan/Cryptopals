@@ -1,6 +1,7 @@
 #ifndef ENCODING_H
 #define ENCODING_H
 
+#include <exception>
 #include <vector>
 #include <string>
 #include <iomanip>
@@ -8,12 +9,20 @@
 #include <cstdint>
 #include <cmath>
 
+class DecodeError : public std::exception {
+        private: 
+            std::string message_;
+
+        public:
+            explicit DecodeError(const std::string &msg);
+            const char* what() const noexcept override;
+};
 
 namespace cp {
     // Base64 Functions
-    std::vector<uint8_t> base64_decode(const std::vector<uint8_t> &input);
+    uint8_t* b64_decode(const std::string buffer, size_t &length, bool strict_mode);
     std::string base64_encode(const std::vector<uint8_t> &input);
-    std::vector<uint8_t> py_base64decode(const std::string filename, const char *argv);
+
 
     // Hex Functions
     std::vector<uint8_t> hex_decode(const std::vector<uint8_t> &input);

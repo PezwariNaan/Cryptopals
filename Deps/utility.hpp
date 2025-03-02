@@ -12,8 +12,8 @@
 #include <sstream>
 #include <map>
 #include <string>
-#include <functional>
 
+#define BYTES std::vector<uint8_t>
 // Declarations
 void print_array(std::vector<uint8_t> array);
 const std::string read_file(const std::string &file_name);
