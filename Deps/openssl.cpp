@@ -23,9 +23,9 @@ std::vector<uint8_t> openssl::encrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector
     return ciphertext;
 }
 
-std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> plaintext, const std::vector<uint8_t> iv, const std::vector<uint8_t> *key) {
+std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, const int blocksize, const std::vector<uint8_t> plaintext, const std::vector<uint8_t> iv, const std::vector<uint8_t> *key) {
     std::vector<uint8_t> ciphertext;
-    std::vector<std::vector<uint8_t>> blocks = create_blocks(plaintext);
+    std::vector<std::vector<uint8_t>> blocks = create_blocks(plaintext, blocksize);
     std::vector<uint8_t> xored_blocks;
 
     // Insert iv as first block 

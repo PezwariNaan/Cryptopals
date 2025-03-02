@@ -19,7 +19,7 @@ void print_array(std::vector<uint8_t> array);
 const std::string read_file(const std::string &file_name);
 const std::map<int, std::vector<uint8_t>> read_lines(const std::string filename);
 const std::vector<uint8_t> read_file_bytes(const std::string &file_name);
-const std::vector<std::vector<uint8_t>> create_blocks(std::vector<uint8_t> plaintext);
+std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext);
 //-------------------------------------------
 
 // Definitions
@@ -85,7 +85,7 @@ inline const std::vector<uint8_t> read_file_bytes(const std::string &file_name) 
     return buffer;
 }
 
-inline const std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext, int BLOCKSIZE) {
+inline std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext, const int BLOCKSIZE) {
     std::vector<std::vector<uint8_t>> block_vector; // All blocks
     size_t i = 0;
     for (; i + BLOCKSIZE <= plaintext.size(); i += BLOCKSIZE)

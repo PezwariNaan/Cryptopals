@@ -81,7 +81,7 @@ int b64_to_char(char c) {
     return -1;
 }
 
-uint8_t* cp::b64_decode(const std::string buffer, size_t &length, bool strict_mode) {
+uint8_t* cp::base64_decode(const std::string buffer, size_t &length, bool strict_mode) {
     std::string error_message;
 
     const uint8_t *ascii_data = (const uint8_t *)buffer.data();

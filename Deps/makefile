@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17 -D_GLIBCXX_USE_CXX11_ABI=1 -lPython3.12
+CXXFLAGS = -Wall -Wextra -std=c++20 -D_GLIBCXX_USE_CXX11_ABI=1
 
 # Target paths
 TARGET_DIR = target
