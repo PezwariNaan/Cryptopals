@@ -85,16 +85,16 @@ inline const std::vector<uint8_t> read_file_bytes(const std::string &file_name) 
     return buffer;
 }
 
-inline std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext, const int BLOCKSIZE) {
+inline std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext, const int blocksize) {
     std::vector<std::vector<uint8_t>> block_vector; // All blocks
     size_t i = 0;
-    for (; i + BLOCKSIZE <= plaintext.size(); i += BLOCKSIZE)
-        block_vector.emplace_back(plaintext.begin() + i, plaintext.begin() + i + BLOCKSIZE);
+    for (; i + blocksize <= plaintext.size(); i += blocksize)
+        block_vector.emplace_back(plaintext.begin() + i, plaintext.begin() + i + blocksize);
 
     // Pad block if necessary
     if (i < plaintext.size()) {
         std::vector<uint8_t> block(plaintext.begin() + i, plaintext.end());
-        size_t padding_needed = BLOCKSIZE - block.size();
+        size_t padding_needed = blocksize - block.size();
         block.insert(block.end(), padding_needed, padding_needed);
 
         // Add block to block_vector;

@@ -7,12 +7,12 @@ BYTES key;
 void generate_key(void) {
     srand(std::time(0));
     for (int i = 0; i < 16; i++) {
-        char random_char = random() % 127;
+        char random_char = (random() % 90) + 33;
         key.push_back(random_char);
     }
 }
 
-BYTES challenge12_oracle(std::string my_string, BYTES &key) {
+BYTES challenge12_oracle(std::string my_string) {
     std::string encoded_text = read_file("Texts/challenge12.txt");
     size_t length = encoded_text.length();
     uint8_t *decoded_bytes_ptr = cp::base64_decode(encoded_text, length, false);
@@ -29,11 +29,43 @@ BYTES challenge12_oracle(std::string my_string, BYTES &key) {
     return ciphertext;
 }
 
+size_t get_blocksize(void) {
+    std::string tester;
+    BYTES ciphertext = challenge12_oracle(tester);
+    size_t initial_length = ciphertext.size();
+
+    for (int i = 1; i < 2048; i++) {
+        tester += i;
+        BYTES new_ciphertext = challenge12_oracle(tester);
+        size_t new_length = new_ciphertext.size();
+
+        if (new_length != initial_length) {
+            return new_length - initial_length;
+        }
+    }
+
+    return -1;
+}
+
+bool detect_ecb() {
+    size_t blocksize = get_blocksize();
+    std::string tester;
+    tester.append(blocksize * 4, 'a');
+    BYTES ciphertext = challenge12_oracle(tester);
+    BYTES first_block(ciphertext.begin(), ciphertext.begin() + blocksize);
+    BYTES second_block(ciphertext.begin() + blocksize, ciphertext.begin() + (blocksize * 2));
+
+    if (first_block == second_block) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 int main() {
     generate_key();
-    std::string my_string = "Hello Worldsdsdfsdfsdfdssdfsdfsdfsdsdsdsdsdfsddf123123 :)";
-    BYTES ciphertext = challenge12_oracle(my_string, key);
-
-    std::cout << ciphertext.size() << std::endl;
+    std::string my_string = "Hello World!\n";
+    BYTES ciphertext = challenge12_oracle(my_string);
+    bool is_ecb = detect_ecb();
     return 0;
 }
