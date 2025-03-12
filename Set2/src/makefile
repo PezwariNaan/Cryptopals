@@ -7,7 +7,7 @@ CFLAGS = -g -std=c++17 -Wall -I$(DEPS_DIR) -D_GLIBCXX_USE_CXX11_ABI=1
 OUTPUT_DIR = ../target/
 
 #CPP Dependencies 
-DEPS = -lpython3.13 -lcrypto -L$(LIB_DIR) -lcryptopals
+DEPS = -lcrypto -L$(LIB_DIR) -lcryptopals
 
 challenge%: challenge%.cpp
 	$(CC) $(CFLAGS) $< -o $(OUTPUT_DIR)$@ $(DEPS)
