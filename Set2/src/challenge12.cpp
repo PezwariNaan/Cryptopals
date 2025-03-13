@@ -53,7 +53,6 @@ size_t get_blocksize(GetHacked hackable) {
 }
 
 bool detect_ecb(size_t blocksize, GetHacked hackable) {
-
     std::string tester;
     tester.append(blocksize * 4, 'a');
     BYTES ciphertext = hackable.challenge12_oracle(tester);
@@ -65,6 +64,47 @@ bool detect_ecb(size_t blocksize, GetHacked hackable) {
     } else {
         return false;
     }
+}
+
+BYTES attack_ecb(GetHacked server, size_t blocksize) {
+    BYTES deciphered = {};
+
+    // Build Dictionary 
+    std::map<BYTES, char> ecb_dictionary;
+    
+    do {
+        BYTES padding(blocksize - (deciphered.size() + 1), 'a');
+
+        for (int i = 0; i < 256; i++) {
+            std::string test_block(padding.begin(), padding.end()); 
+            if (deciphered.size() == 0) {
+                test_block.push_back(i);
+            } else {
+                test_block.insert(test_block.end(), deciphered.begin(), deciphered.end());
+                test_block.push_back(i);
+            }
+
+            BYTES ciphertext = server.challenge12_oracle(test_block);
+            BYTES ecb_dictionary_key(ciphertext.begin(), ciphertext.begin() + blocksize);
+
+            ecb_dictionary.insert({ecb_dictionary_key, i});
+        }
+
+        // Test Dictionary
+        std::string test_padding(blocksize - (deciphered.size() + 1), 'a');
+
+        BYTES test_ciphertext = server.challenge12_oracle(test_padding);
+        BYTES test_block(test_ciphertext.begin(), test_ciphertext.begin() + blocksize);
+
+        auto iter = ecb_dictionary.find(test_block);
+        if (iter != ecb_dictionary.end()) {
+            deciphered.push_back(iter->second);
+        } else {
+            break;
+        }
+    } while (deciphered.size() < blocksize);
+
+    return deciphered;
 }
 
 int main() {
@@ -79,43 +119,9 @@ int main() {
         return -1;
     }
 
-    // Build Dictionary 
-
-    std::map<BYTES, char> ecb_dictionary;
-    for (size_t n = 1; n < 2; n++) {
-        std::string padding(blocksize - 1, 'a');
-
-        for (int i = 0; i < 256; i++) {
-    
-            std::string test_block = padding; 
-            test_block.insert(test_block.end(), n, i);
-
-            BYTES ciphertext = server.challenge12_oracle(test_block);
-            BYTES ecb_dictionary_key(ciphertext.begin(), ciphertext.begin() + blocksize);
-    
-            ecb_dictionary.insert({ecb_dictionary_key, i});
-        }
-    }
-
-    // Test Dictionary
-    std::string test_padding(15, 'a');
-
-    BYTES test_ciphertext = server.challenge12_oracle(test_padding);
-    BYTES test_block(test_ciphertext.begin(), test_ciphertext.begin() + blocksize);
-
-    auto iter = ecb_dictionary.find(test_block);
-    if (iter != ecb_dictionary.end()) {
-        std::cout << "First Character: " << iter->second << '\n';
-        return 0;
-    }
-        
-
-    // auto iter = ecb_dictionary.begin();
-    // while (iter != ecb_dictionary.end()) {
-    //     std::cout << iter->second << " :::: ";
-    //     std::cout << cp::hex_encode((iter->first)) << '\n';
-    //     iter++;
-    // }
+    BYTES answer_vec = attack_ecb(server, blocksize);
+    std::string answer(answer_vec.begin(), answer_vec.end());
+    std::cout << answer << '\n';
 
     return 0;
 }
