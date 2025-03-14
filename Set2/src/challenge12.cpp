@@ -68,41 +68,43 @@ bool detect_ecb(size_t blocksize, GetHacked hackable) {
 
 BYTES attack_ecb(GetHacked server, size_t blocksize) {
     BYTES deciphered = {};
-
+    BYTES hidden_text = server.challenge12_oracle("");
     // Build Dictionary 
     std::map<BYTES, char> ecb_dictionary;
     
     do {
-        BYTES padding(blocksize - (deciphered.size() + 1), 'a');
+        size_t padding_size = blocksize  - (deciphered.size() % blocksize) - 1;
+        BYTES padding(padding_size, 'a');
+        size_t block_index = deciphered.size() / blocksize;
 
         for (int i = 0; i < 256; i++) {
             std::string test_block(padding.begin(), padding.end()); 
-            if (deciphered.size() == 0) {
-                test_block.push_back(i);
-            } else {
-                test_block.insert(test_block.end(), deciphered.begin(), deciphered.end());
-                test_block.push_back(i);
-            }
+            test_block.insert(test_block.end(), deciphered.begin(), deciphered.end());
+            test_block.push_back(i);
 
             BYTES ciphertext = server.challenge12_oracle(test_block);
-            BYTES ecb_dictionary_key(ciphertext.begin(), ciphertext.begin() + blocksize);
+            BYTES ecb_dictionary_key(ciphertext.begin() + (blocksize * block_index),
+                                ciphertext.begin() + (blocksize * (block_index + 1)));
 
             ecb_dictionary.insert({ecb_dictionary_key, i});
         }
 
-        // Test Dictionary
-        std::string test_padding(blocksize - (deciphered.size() + 1), 'a');
+        // Search for Dictionary Match
+        std::string test_padding(padding_size, 'a');
 
         BYTES test_ciphertext = server.challenge12_oracle(test_padding);
-        BYTES test_block(test_ciphertext.begin(), test_ciphertext.begin() + blocksize);
+        BYTES test_block(test_ciphertext.begin() + (blocksize * block_index), 
+                        test_ciphertext.begin() + (blocksize * (block_index + 1)));
 
         auto iter = ecb_dictionary.find(test_block);
+
         if (iter != ecb_dictionary.end()) {
             deciphered.push_back(iter->second);
         } else {
             break;
         }
-    } while (deciphered.size() < blocksize);
+
+    } while (deciphered.size() < hidden_text.size());
 
     return deciphered;
 }
@@ -115,13 +117,13 @@ int main() {
     size_t blocksize = get_blocksize(server);
     bool is_ecb = detect_ecb(blocksize, server); // In this instance it is True
     if (!is_ecb) {
-        std::cerr << "No ECB encypted ciphertext found" << std::endl;
+        std::cerr << "No ECB Encypted Ciphertext Found" << std::endl;
         return -1;
     }
 
     BYTES answer_vec = attack_ecb(server, blocksize);
     std::string answer(answer_vec.begin(), answer_vec.end());
-    std::cout << answer << '\n';
-
+    std::cout << answer;
+    
     return 0;
 }

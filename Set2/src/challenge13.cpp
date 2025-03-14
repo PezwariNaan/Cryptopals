@@ -1,9 +1,5 @@
 #include "utility.hpp"
 #include "openssl.hpp"
-#include <cstdint>
-#include <openssl/evp.h>
-#include <sys/types.h>
-#include <vector>
 
 #define MAP std::map<std::string, std::string>
 #define BYTES std::vector<uint8_t>
@@ -64,7 +60,7 @@ std::string encode_profile(MAP profile) {
 std::vector<uint8_t> encrypt_profile(std::string profile_str, BYTES key) {
 	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 	std::vector<uint8_t> profile_vec(profile_str.begin(), profile_str.end());
-	std::vector<uint8_t> ciphertext = openssl::encrypt_ecb(ctx, profile_vec, &key);
+	std::vector<uint8_t> ciphertext = openssl::encrypt_ecb(ctx, profile_vec, key);
 
 	return ciphertext;
 }
