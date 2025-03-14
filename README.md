@@ -13,7 +13,6 @@ This repository contains my solutions and code for each challenge, organized by 
 ## 🛠 Technologies
 
 - **C++**: The primary language used to solve the challenges.  
-- **Python 3**: Used for Base64 encoding and decoding until I debug mine 😅
 - **Cryptography Libraries**: OpenSSL
 
 ## 📝 Acknowledgments
