@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include "openssl.hpp"
 #include "encoding.hpp"
+#include <cstdlib>
 
 struct Info {
     size_t blocksize;
@@ -27,8 +28,14 @@ class GetHacked {
             size_t length = encoded_text.length();
             uint8_t *decoded_bytes_ptr = cp::base64_decode(encoded_text, length, false);
 
-            // Random padding
-
+            // Random prefix
+            srand(std::time(0));
+            std::string prefix;
+            int prefix_length = random() % 80;
+            for (int i = 0; i < prefix_length; i++) {
+                char random_char = (random() % 90) + 33;
+                prefix.push_back(random_char);
+            }
 
             // Convert string to std::vector<uint8_t>
             BYTES unknown_bytes(decoded_bytes_ptr, decoded_bytes_ptr + length); // This works because the length variable is updated with length of the byte array by the decode function 
@@ -36,8 +43,12 @@ class GetHacked {
 
             // Concatinate my_bytes & unknown bytes
             BYTES total_bytes;
-            total_bytes.insert(total_bytes.begin(), my_bytes.begin(), my_bytes.end());
+            total_bytes.insert(total_bytes.begin(), prefix.begin(), prefix.end());
+            total_bytes.insert(total_bytes.end(), my_bytes.begin(), my_bytes.end());
             total_bytes.insert(total_bytes.end(), unknown_bytes.begin(), unknown_bytes.end());
+            
+            // Debug
+            std::cout << cp::hex_encode(total_bytes) << "\n\n";
 
             // Encrypt
             BYTES ciphertext = openssl::encrypt_ecb(ctx, total_bytes, key);
@@ -128,7 +139,8 @@ int main() {
     // Instanciate Cipher
     GetHacked server;
     server.generate_key();
-    
+    server.challenge12_oracle("");
+    return 0;
     Info info = get_block_info(server);
     bool is_ecb = detect_ecb(info.blocksize, server); // In this instance it is True
     if (!is_ecb) {
