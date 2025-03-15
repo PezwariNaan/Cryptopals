@@ -2,6 +2,11 @@
 #include "openssl.hpp"
 #include "encoding.hpp"
 
+struct Info {
+    size_t blocksize;
+    size_t cipher_len;
+};
+
 class GetHacked {
     private:
         BYTES key;
@@ -34,8 +39,9 @@ class GetHacked {
         }
 };
 
-size_t get_blocksize(GetHacked hackable) {
-    std::string tester;
+Info get_block_info(GetHacked hackable) {
+    Info info;
+    std::string tester = "";
     BYTES ciphertext = hackable.challenge12_oracle(tester);
     size_t initial_length = ciphertext.size();
 
@@ -45,11 +51,14 @@ size_t get_blocksize(GetHacked hackable) {
         size_t new_length = new_ciphertext.size();
 
         if (new_length != initial_length) {
-            return new_length - initial_length;
+            info.blocksize = new_length - initial_length;
+            info.cipher_len = initial_length - i;
+            return info;
         }
-    }
-
-    return -1;
+    } 
+    info.blocksize = -1;
+    info.cipher_len = -1;
+    return info;
 }
 
 bool detect_ecb(size_t blocksize, GetHacked hackable) {
@@ -66,16 +75,16 @@ bool detect_ecb(size_t blocksize, GetHacked hackable) {
     }
 }
 
-BYTES attack_ecb(GetHacked server, size_t blocksize) {
+BYTES attack_ecb(GetHacked server, Info info) {
     BYTES deciphered = {};
     BYTES hidden_text = server.challenge12_oracle("");
     // Build Dictionary 
     std::map<BYTES, char> ecb_dictionary;
     
     do {
-        size_t padding_size = blocksize  - (deciphered.size() % blocksize) - 1;
+        size_t padding_size = info.blocksize  - (deciphered.size() % info.blocksize) - 1;
         BYTES padding(padding_size, 'a');
-        size_t block_index = deciphered.size() / blocksize;
+        size_t block_index = deciphered.size() / info.blocksize;
 
         for (int i = 0; i < 256; i++) {
             std::string test_block(padding.begin(), padding.end()); 
@@ -83,8 +92,8 @@ BYTES attack_ecb(GetHacked server, size_t blocksize) {
             test_block.push_back(i);
 
             BYTES ciphertext = server.challenge12_oracle(test_block);
-            BYTES ecb_dictionary_key(ciphertext.begin() + (blocksize * block_index),
-                                ciphertext.begin() + (blocksize * (block_index + 1)));
+            BYTES ecb_dictionary_key(ciphertext.begin() + (info.blocksize * block_index),
+                                ciphertext.begin() + (info.blocksize * (block_index + 1)));
 
             ecb_dictionary.insert({ecb_dictionary_key, i});
         }
@@ -93,8 +102,8 @@ BYTES attack_ecb(GetHacked server, size_t blocksize) {
         std::string test_padding(padding_size, 'a');
 
         BYTES test_ciphertext = server.challenge12_oracle(test_padding);
-        BYTES test_block(test_ciphertext.begin() + (blocksize * block_index), 
-                        test_ciphertext.begin() + (blocksize * (block_index + 1)));
+        BYTES test_block(test_ciphertext.begin() + (info.blocksize * block_index), 
+                        test_ciphertext.begin() + (info.blocksize * (block_index + 1)));
 
         auto iter = ecb_dictionary.find(test_block);
 
@@ -104,7 +113,7 @@ BYTES attack_ecb(GetHacked server, size_t blocksize) {
             break;
         }
 
-    } while (deciphered.size() < hidden_text.size());
+    } while (deciphered.size() < info.cipher_len);
 
     return deciphered;
 }
@@ -114,16 +123,15 @@ int main() {
     GetHacked server;
     server.generate_key();
     
-    size_t blocksize = get_blocksize(server);
-    bool is_ecb = detect_ecb(blocksize, server); // In this instance it is True
+    Info info = get_block_info(server);
+    bool is_ecb = detect_ecb(info.blocksize, server); // In this instance it is True
     if (!is_ecb) {
         std::cerr << "No ECB Encypted Ciphertext Found" << std::endl;
         return -1;
     }
 
-    BYTES answer_vec = attack_ecb(server, blocksize);
+    BYTES answer_vec = attack_ecb(server, info);
     std::string answer(answer_vec.begin(), answer_vec.end());
     std::cout << answer;
-    
     return 0;
 }
