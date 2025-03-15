@@ -1,11 +1,5 @@
 #include "encrypting.hpp"
 #include "utility.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <openssl/aes.h>
-#include <openssl/evp.h>
-#include <stdexcept>
-#include <sys/types.h>
 
 #define BLOCKSIZE 16
 

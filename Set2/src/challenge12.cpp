@@ -17,9 +17,8 @@ class GetHacked {
         void generate_key(void) {
             srand(std::time(0));
             for (int i = 0; i < 16; i++) {
-                // char random_char = (random() % 90) + 33; // Always generate an ASCII character
-                // key.push_back(random_char);
-                key.push_back('A');
+                char random_char = (random() % 90) + 33; // Always generate an ASCII character
+                key.push_back(random_char);
             }
         }
 
