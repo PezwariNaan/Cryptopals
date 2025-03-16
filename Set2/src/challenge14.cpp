@@ -21,7 +21,10 @@ class GetHacked {
     public:
         GetHacked() {
             srand(std::time(0));
+            generate_key();
+            generate_prefix();
         }
+
         void generate_key(void) {
             for (int i = 0; i < 16; i++) {
                 char random_char = (random() % 90) + 33; // Always generate an ASCII character
@@ -78,8 +81,7 @@ Info get_block_info(GetHacked hackable) {
         i++;
     }
     info.prefix_block = i; // Multiple of 'blocksize'
-                           // This is where our input starts
-
+                           // This is the block where our input starts
 
     // This will get the block size
     for (; j < 2048; j++) {
@@ -92,7 +94,7 @@ Info get_block_info(GetHacked hackable) {
     }
 
     info.blocksize = manipulated_ciphertext.size() - original_ciphertext.size();
-    info.padding_length = info.blocksize - j;
+    info.padding_length = j;
 
     // Once we have the blocksize size & the start of the block our input is in
     // We can add & compare characters
@@ -201,11 +203,6 @@ BYTES attack_ecb(GetHacked server, Info info) {
 int main() {
     // Instanciate Cipher
     GetHacked server;
-    server.generate_key();
-    server.generate_prefix();
-    BYTES cipher_normal = server.challenge12_oracle("");
-
-    BYTES cipher_padded = server.challenge12_oracle("a");
 
     Info info = get_block_info(server);
 
