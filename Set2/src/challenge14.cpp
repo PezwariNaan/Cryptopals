@@ -86,6 +86,8 @@ Info get_block_info(GetHacked hackable) {
         if (manipulated_ciphertext.size() == original_ciphertext.size()) {
             test_string.push_back('A');
             manipulated_ciphertext = hackable.challenge12_oracle(test_string);
+        } else {
+            break;
         }
     }
 
@@ -103,23 +105,22 @@ Info get_block_info(GetHacked hackable) {
     BYTES prefix_test_ciphertext = hackable.challenge12_oracle(prefix_test_string);
     BYTES prefix_test_ciphertext2 = hackable.challenge12_oracle(prefix_test_string2);
 
-    std::cout <<cp::hex_encode(prefix_test_ciphertext) << "\n\n";
-    std::cout <<cp::hex_encode(prefix_test_ciphertext2) << "\n\n";
-
     while (prefix_test_ciphertext[start] == prefix_test_ciphertext2[start]) {
         k++;        
         prefix_test_string.push_back('A');
         prefix_test_string2.push_back('B');
         prefix_test_ciphertext = hackable.challenge12_oracle(prefix_test_string);
         prefix_test_ciphertext2 = hackable.challenge12_oracle(prefix_test_string2);
-
-        std::cout <<cp::hex_encode(prefix_test_ciphertext) << "\n\n";
-        std::cout <<cp::hex_encode(prefix_test_ciphertext2) << "\n\n";
     }
 
     info.prefix_length = info.prefix_block + (info.blocksize - (k - 1)); // k is the number of bytes it takes to edit THE NEXT BLOCK
                                                                          // Which is the number it takes to fill the previous block + 1
     info.cipher_length = original_ciphertext.size() - (info.padding_length  + info.prefix_length);
+
+    std::cout << "Prefix Length: " << info.prefix_length << '\n';
+    std::cout << "Text Length: " << info.cipher_length << '\n';
+    std::cout << "Ciphertext Length " << original_ciphertext.size() << '\n';
+    std::cout << "Padding Length: " << info.padding_length << "\n\n";
 
     if (info.blocksize == 0) { // If we never get the blocksize we're sad
         info.blocksize      = -1;
