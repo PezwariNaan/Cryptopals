@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include "openssl.hpp"
 #include "encoding.hpp"
+#include <cstdlib>
 #include <openssl/asn1.h>
 
 struct Info {
@@ -13,32 +14,43 @@ struct Info {
 
 class GetHacked {
     private:
-        BYTES key;
+        const BYTES key;
+        const std::string prefix;
         EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
         std::string encoded_text = read_file("Texts/challenge12.txt");
-        std::string prefix;
 
-    public:
-        GetHacked() {
-            srand(std::time(0));
-            generate_key();
-            generate_prefix();
+        void seed() {
+            static bool seeded = false;
+            if (!seeded) {
+                srand(std::time(0));
+                seeded = true;
+            }
+            return;
         }
 
-        void generate_key(void) {
+        const BYTES generate_key() {
+            seed();
+            BYTES _key;
             for (int i = 0; i < 16; i++) {
                 char random_char = (random() % 90) + 33; // Always generate an ASCII character
-                key.push_back(random_char);
+                _key.push_back(random_char);
             }
+            return _key;
         }
 
-        void generate_prefix(void) {
+        const std::string generate_prefix(void) {
+            seed();
+            std::string _prefix;
             int prefix_length = random() % 80;
             for (int i = 0; i < prefix_length; i++) {
                 char random_char = (random() % 90) + 33;
-                prefix.push_back(random_char);
+                _prefix.push_back(random_char);
             }
+            return _prefix;
         }
+
+    public:
+        GetHacked() : key(generate_key()), prefix(generate_prefix()) {}
 
         BYTES challenge12_oracle(std::string my_string) {
             // Unknown string - load & decode
