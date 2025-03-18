@@ -1,8 +1,8 @@
 #include "utility.hpp"
+#include "encoding.hpp"
+#include "openssl.hpp"
 #include <algorithm>
-#include <exception>
-#include <iterator>
-#include <string>
+#include <random>
 
 class InputError : public std::exception {
     private:
@@ -18,17 +18,53 @@ class InputError : public std::exception {
 
 class GetHacked {
     private:
-        BYTES key;
-        void generate_key() {
+        const BYTES key;
+        const BYTES iv;
+        static constexpr int blocksize = 16;
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        
+        void seed(void) {
+            static bool seeded = false;
+            if (!seeded) {
+                std::random_device rd;
+                srand(rd());
+                seeded = true;
+            }
             return;
         }
 
-    public:
-        GetHacked() {
-            generate_key();
+        BYTES generate_key(void) {
+            seed();
+            BYTES _key;
+            for (int i = 0; i < blocksize; i++) {
+                char random_char = rand() % 256;
+                _key.push_back(random_char);
+            }
+
+            return _key;
         }
 
-        std::string create_cookie(std::string user_input) {
+        BYTES generate_iv(void) {
+            seed();
+            BYTES _iv;
+            for (int i = 0; i < blocksize; i++) {
+                _iv.push_back(rand() % 256);
+            }
+            return _iv;
+        }
+
+    public:
+        GetHacked() : key(generate_key()), iv(generate_iv()) {}
+
+        void pkcs7(std::string &input) {
+            int blocksize = 16;
+            int padding = blocksize - (input.size() % blocksize);
+            input.append(padding, static_cast<char>(padding));
+
+            return;
+        }
+
+        BYTES request(std::string user_input) {
             std::string cookie;
             std::string prefix = "comment1=cooking%20MCs;userdata=";
             std::string postfix = ";comment2=%20like%20a%20pound%20of%20bacon";
@@ -41,16 +77,20 @@ class GetHacked {
             cookie.append(prefix);
             cookie.append(user_input);
             cookie.append(postfix);
+            pkcs7(cookie);
 
-            return cookie;
+            BYTES cookie_vec(cookie.begin(), cookie.end());
+            BYTES encrypted_cookie = openssl::encrypt_cbc(ctx, blocksize, cookie_vec,iv, key); 
+
+            return encrypted_cookie;
         }
 };
 
 int main() {
     GetHacked server;
-    std::string cookie = server.create_cookie("H==el==l;;o===;;;;;;;;;World!");
+    BYTES cookie = server.request("aaaaaaa");
     
-    std::cout << cookie << std::endl;
+    std::cout << cp::hex_encode(cookie) << std::endl;
 
     return 0;
 }
