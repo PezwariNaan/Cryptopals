@@ -23,6 +23,27 @@ std::vector<uint8_t> openssl::encrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector
     return ciphertext;
 }
 
+std::vector<uint8_t> openssl::decrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector<uint8_t> ciphertext, const std::vector<uint8_t> &key) {
+    if (EVP_DecryptInit(ctx, EVP_aes_128_ecb(), key.data(), NULL) != 1)
+        throw std::runtime_error("Error Initalising Decryption Engine.");
+
+    std::vector<uint8_t> plaintext(ciphertext.size() + EVP_CIPHER_CTX_block_size(ctx));
+    int plaintext_len = 0;
+    int len = 0;
+
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size()) != 1)
+        throw std::runtime_error("Error With ECB Decryption."); 
+    plaintext_len = len;
+
+    if (EVP_DecryptFinal(ctx, plaintext.data() + plaintext_len, &len) != 1)
+        throw std::runtime_error("Error With ECB Decryption (Final Step).");
+    plaintext_len += len;
+    
+    plaintext.resize(plaintext_len);
+    
+    return plaintext;
+}
+
 std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, const int blocksize, const std::vector<uint8_t> plaintext, const std::vector<uint8_t> iv, const std::vector<uint8_t> &key) {
     std::vector<uint8_t> ciphertext;
     std::vector<std::vector<uint8_t>> blocks = create_blocks(plaintext, blocksize);
@@ -40,4 +61,3 @@ std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, const int blocksi
     
     return ciphertext;
 }
-

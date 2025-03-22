@@ -2,6 +2,7 @@
 #include "encoding.hpp"
 #include "openssl.hpp"
 #include <algorithm>
+#include <openssl/evp.h>
 #include <random>
 
 class InputError : public std::exception {
@@ -53,9 +54,6 @@ class GetHacked {
             return _iv;
         }
 
-    public:
-        GetHacked() : key(generate_key()), iv(generate_iv()) {}
-
         void pkcs7(std::string &input) {
             int blocksize = 16;
             int padding = blocksize - (input.size() % blocksize);
@@ -63,6 +61,9 @@ class GetHacked {
 
             return;
         }
+
+    public:
+        GetHacked() : key(generate_key()), iv(generate_iv()) {}
 
         BYTES request(std::string user_input) {
             std::string cookie;
@@ -84,12 +85,26 @@ class GetHacked {
 
             return encrypted_cookie;
         }
+
+        BYTES decrypt_cbc(BYTES encrypted_cookie) {
+            BYTES plaintext;
+
+            return plaintext;
+        }
+
+        bool check_admin(BYTES decrypted_cookie) {
+            bool is_admin = false;
+            
+            return is_admin;
+        }
+
+
 };
 
 int main() {
     GetHacked server;
-    BYTES cookie = server.request("aaaaaaa");
-    
+    std::string user_input(16, 'a');
+    BYTES cookie = server.request(user_input);   
     std::cout << cp::hex_encode(cookie) << std::endl;
 
     return 0;
