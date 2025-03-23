@@ -81,14 +81,16 @@ class GetHacked {
             pkcs7(cookie);
 
             BYTES cookie_vec(cookie.begin(), cookie.end());
-            BYTES encrypted_cookie = openssl::encrypt_cbc(ctx, blocksize, cookie_vec,iv, key); 
+            BYTES encrypted_cookie = openssl::encrypt_cbc(ctx, blocksize, cookie_vec,key, iv); 
 
             return encrypted_cookie;
         }
 
         bool check_admin(BYTES cookie) {
             bool is_admin = false;
-            
+            BYTES decrypted = openssl::decrypt_cbc(ctx, blocksize, cookie, key, iv);
+            print_array(decrypted);
+            std::cout << std::endl;
             return is_admin;
         }
 
@@ -100,6 +102,7 @@ int main() {
     std::string user_input(16, 'a');
     BYTES cookie = server.request(user_input);
     std::cout << cp::hex_encode(cookie) << std::endl;
+    server.check_admin(cookie);
 
     return 0;
 }
