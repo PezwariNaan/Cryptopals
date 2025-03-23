@@ -44,20 +44,77 @@ std::vector<uint8_t> openssl::decrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector
     return plaintext;
 }
 
-std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, const int blocksize, const std::vector<uint8_t> plaintext, const std::vector<uint8_t> iv, const std::vector<uint8_t> &key) {
+std::vector<uint8_t> openssl::encrypt_block(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> block, const int blocksize) {
+    std::vector<uint8_t> ciphertext(blocksize);
+    int len = 0;
+
+    if (EVP_EncryptUpdate(ctx, ciphertext.data(), &len, block.data(), block.size()) != 1)
+        throw std::runtime_error("Error During Encryption.");
+    
+    ciphertext.resize(len);
+
+    return ciphertext;
+}
+
+std::vector<uint8_t> openssl::encrypt_cbc(EVP_CIPHER_CTX *ctx, int blocksize,const std::vector<uint8_t> plaintext, const std::vector<uint8_t> &key, const std::vector<uint8_t> iv) {
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key.data(), NULL) != 1)
+        std::runtime_error("Error Initalising Encryption Engine.");
+
     std::vector<uint8_t> ciphertext;
     std::vector<std::vector<uint8_t>> blocks = create_blocks(plaintext, blocksize);
-    std::vector<uint8_t> xored_blocks;
 
-    // Insert iv as first block 
-    blocks.insert(blocks.begin(), iv);
+    std::vector<uint8_t> prev_block = iv;
 
-    for (size_t i = 1; i < blocks.size() - 1; i++) {
-        std::vector<uint8_t> xored_block = cp::fixed_xor(blocks[i - 1], blocks[i]);
-        xored_blocks.insert(xored_blocks.end(), xored_block.begin(), xored_block.end());
-        std::vector<uint8_t> encrypted_block = openssl::encrypt_ecb(ctx, xored_block, key);
+    for (size_t i = 0; i < blocks.size(); i++) {
+        // XOR
+        std::vector<uint8_t> xored_block = cp::fixed_xor(prev_block, blocks[i]);
+        // Then Encrypt
+        std::vector<uint8_t> encrypted_block = encrypt_block(ctx, xored_block, blocksize);
+        // Then Append
         ciphertext.insert(ciphertext.end(), encrypted_block.begin(), encrypted_block.end());
+        prev_block = encrypted_block;
     }
     
+    EVP_CIPHER_CTX_reset(ctx);
     return ciphertext;
+}
+
+std::vector<uint8_t> openssl::decrypt_block(EVP_CIPHER_CTX *ctx, std::vector<uint8_t> block, const int blocksize) {
+    std::vector<uint8_t> plaintext(blocksize);
+    int len = 0;
+
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, block.data(), block.size()) != 1)
+        throw std::runtime_error("Error during decryption.");
+    
+    plaintext.resize(len);
+
+    return plaintext;
+}
+
+std::vector<uint8_t> openssl::decrypt_cbc(EVP_CIPHER_CTX *ctx, int blocksize,const std::vector<uint8_t> ciphertext, const std::vector<uint8_t> &key, const std::vector<uint8_t> iv) {
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key.data(), NULL) != 1)
+        std::runtime_error("Error Initalising Encryption Engine.");
+
+    std::vector<std::vector<uint8_t>> blocks = create_blocks(ciphertext, blocksize);
+
+    std::vector<uint8_t> decrypted_text;
+    std::vector<uint8_t> prev_block = iv;
+
+    for (size_t i = 0; i < blocks.size(); i++) {
+        // Decrypt
+        std::vector<uint8_t> decrypted_block = decrypt_block(ctx, blocks[i], blocksize);
+        // Then XOR
+        std::vector<uint8_t> plaintext_block = cp::fixed_xor(decrypted_block, prev_block);
+        // Then Appened 
+        decrypted_text.insert(decrypted_text.end(), plaintext_block.begin(), plaintext_block.end());
+        prev_block = blocks[i];
+    }
+    
+    EVP_CIPHER_CTX_reset(ctx);
+
+    return decrypted_text;
 }

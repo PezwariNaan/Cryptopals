@@ -86,13 +86,7 @@ class GetHacked {
             return encrypted_cookie;
         }
 
-        BYTES decrypt_cbc(BYTES encrypted_cookie) {
-            BYTES plaintext;
-
-            return plaintext;
-        }
-
-        bool check_admin(BYTES decrypted_cookie) {
+        bool check_admin(BYTES cookie) {
             bool is_admin = false;
             
             return is_admin;
@@ -104,7 +98,7 @@ class GetHacked {
 int main() {
     GetHacked server;
     std::string user_input(16, 'a');
-    BYTES cookie = server.request(user_input);   
+    BYTES cookie = server.request(user_input);
     std::cout << cp::hex_encode(cookie) << std::endl;
 
     return 0;

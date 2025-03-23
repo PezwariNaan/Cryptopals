@@ -1,20 +1,17 @@
 #include "encrypting.hpp"
 #include "utility.hpp"
-#include <cstddef>
-#include <cstdint>
-#include <vector>
 
-// Encryption
-std::vector<uint8_t> cp::fixed_xor(const std::vector<uint8_t> &start, const std::vector<uint8_t> &key) {
+
+std::vector<uint8_t> cp::fixed_xor(const std::vector<uint8_t> &x, const std::vector<uint8_t> &y) {
     std::vector<uint8_t> result;
 
-    if (key.size() != start.size()) {
-        std::cerr << "Text and key are not matching lengths";
+    if (x.size() != y.size()) {
+        std::cerr << "Input Length Mis-Match\n";
         return result;
     }
 
-    for (size_t i = 0; i < start.size(); i++) 
-        result.push_back(start[i] ^ key[i]);
+    for (size_t i = 0; i < x.size(); i++) 
+        result.push_back(x[i] ^ y[i]);
 
     return result;
 }

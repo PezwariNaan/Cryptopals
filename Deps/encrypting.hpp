@@ -17,7 +17,7 @@ struct result {
 };
 
 namespace cp {
-    std::vector<uint8_t> fixed_xor(const std::vector<uint8_t> &start, const std::vector<uint8_t> &key);
+    std::vector<uint8_t> fixed_xor(const std::vector<uint8_t> &x, const std::vector<uint8_t> &y);
     std::vector<uint8_t> repeating_key_xor(const std::vector<uint8_t> &plain_bytes, const std::vector<uint8_t> &key_bytes);
 
     // Attack Single Byte XOR 
