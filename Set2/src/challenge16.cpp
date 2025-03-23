@@ -1,8 +1,6 @@
+#include "encrypting.hpp"
 #include "utility.hpp"
-#include "encoding.hpp"
 #include "openssl.hpp"
-#include <algorithm>
-#include <openssl/evp.h>
 #include <random>
 
 class InputError : public std::exception {
@@ -51,6 +49,7 @@ class GetHacked {
             for (int i = 0; i < blocksize; i++) {
                 _iv.push_back(rand() % 256);
             }
+
             return _iv;
         }
 
@@ -89,20 +88,55 @@ class GetHacked {
         bool check_admin(BYTES cookie) {
             bool is_admin = false;
             BYTES decrypted = openssl::decrypt_cbc(ctx, blocksize, cookie, key, iv);
-            print_array(decrypted);
-            std::cout << std::endl;
+            std::string decrypted_str(decrypted.begin(), decrypted.end());
+
+            std::string substring = ";admin=true;";
+
+            if (decrypted_str.find(substring) != std::string::npos) {
+                is_admin = true;
+            }
+            std::cout << decrypted_str << std::endl;
+
             return is_admin;
         }
 
-
 };
+
+BYTES xor_input(std::string mask1_str, std::string mask2_str) {
+    BYTES input;
+    BYTES mask1(mask1_str.begin(), mask1_str.end());
+    BYTES mask2(mask2_str.begin(), mask2_str.end());
+
+    input = cp::fixed_xor(mask1, mask2);
+
+    return input;
+}
+
+BYTES xor_cookie(BYTES cookie, BYTES mask) {
+    int blocksize = 16;
+
+    // XOR the 3rd block directly
+    for (int i = 0; i < blocksize; ++i) {
+        cookie[2 * blocksize + i] ^= mask[i];
+    }
+
+    return cookie;
+}
 
 int main() {
     GetHacked server;
-    std::string user_input(16, 'a');
+    std::string mask1(16, 'a');
+    std::string mask2 = "aaaaa;admin=true";
+
+    BYTES vec_input = xor_input(mask1, mask2);
+    std::string user_input(vec_input.begin(), vec_input.end());
+    user_input.insert(user_input.begin(), 16, 'a');
+
     BYTES cookie = server.request(user_input);
-    std::cout << cp::hex_encode(cookie) << std::endl;
-    server.check_admin(cookie);
+    BYTES new_cookie = xor_cookie(cookie, BYTES(mask1.begin(), mask1.end()));
+
+    bool check = server.check_admin(new_cookie);
+    std::cout << check << std::endl;
 
     return 0;
 }
