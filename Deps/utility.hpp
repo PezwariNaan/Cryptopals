@@ -17,7 +17,7 @@
 // Declarations
 void print_array(std::vector<uint8_t> array);
 const std::string read_file(const std::string &file_name);
-const std::map<int, std::vector<uint8_t>> read_lines(const std::string filename);
+const std::vector<std::vector<uint8_t>> read_lines(const std::string filename);
 const std::vector<uint8_t> read_file_bytes(const std::string &file_name);
 std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext);
 //-------------------------------------------
@@ -41,19 +41,17 @@ inline const std::string read_file(const std::string &file_name){
     return buffer.str();
 }
 
-inline const std::map<int, std::vector<uint8_t>> read_lines(const std::string file_name) {
+inline const std::vector<std::vector<uint8_t>> read_lines(const std::string file_name) {
     std::ifstream file(file_name);
     if (!file.is_open()) {
         std::cerr << "Error Opening " <<file_name << std::endl;
     }
-    std::map<int, std::vector<uint8_t>> lines; // line_number, line_content
-    int line_number = 1;
+    std::vector<std::vector<uint8_t>> lines; 
     std::string line_content;
 
     while(std::getline(file, line_content)) {
         std::vector<uint8_t> line_content_bytes(line_content.begin(), line_content.end());
-        lines.insert({line_number, line_content_bytes});
-        line_number++;
+        lines.push_back(line_content_bytes);
     }
 
     return lines;
