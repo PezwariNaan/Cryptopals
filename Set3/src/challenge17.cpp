@@ -1,6 +1,5 @@
 #include "utility.hpp"
-#include <cstdlib>
-#include <ctime>
+#include <random>
 #include "openssl.hpp"
 #include "encoding.hpp"
 
@@ -15,20 +14,11 @@ class Hackable {
         BYTES _iv;
         std::vector<std::vector<uint8_t>> texts = read_lines("Texts/challenge17.txt");
 
-        void is_seeded() {
-            static bool seeded = false;
-            if (!seeded) {
-                srand(std::time(0));
-                seeded = true;
-            }
-            return;
-        }
-
         BYTES generate_random_bytes(void) {
-            is_seeded();
             BYTES result;
+            std::random_device rd;
             while (result.size() < 16)
-                result.push_back((rand() % 70)+ 32);
+                result.push_back((rd() % 70)+ 32);
             return result;
         }
 
@@ -40,11 +30,14 @@ class Hackable {
 
         cipher encrypt_string(void) {
             cipher response;
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();\
+            int blocksize = 16;
+
             BYTES random_text = texts[rand() % texts.size()];
             pkcs7_padding(random_text);
-            response.ciphertext = random_text;
+            response.ciphertext = openssl::encrypt_cbc(ctx, blocksize, random_text, _key, _iv);
             response.iv = _iv;
-            
+
             return response;
         }
 };
@@ -53,6 +46,7 @@ class Hackable {
 // Select A String Randomly 
 // Pad it
 // Encrypt it
+// Return ciphertext and iv
 
 // Function Two
 // Accept ciphertext
@@ -63,11 +57,9 @@ class Hackable {
 int main(void) {
     Hackable server;
     cipher response = server.encrypt_string();
-    try {
-        is_valid_pkcs7(response.ciphertext);    
-    } catch (PaddingError &e) {
-        std::cout << e.what() << std::endl;
-    }
+    std::cout << cp::hex_encode(response.ciphertext) << std::endl;
+    std::cout << '\n';
+    std::cout << cp::hex_encode(response.iv) << std::endl;
 
     return 0;
 }
