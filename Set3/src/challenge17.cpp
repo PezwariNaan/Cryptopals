@@ -2,7 +2,6 @@
 #include <openssl/evp.h>
 #include <random>
 #include "openssl.hpp"
-#include "encoding.hpp"
 
 struct cipher {
     BYTES ciphertext;
@@ -24,12 +23,6 @@ class Hackable {
         }
 
     public:
-    // Function One
-    // Select A String Randomly 
-    // Pad it
-    // Encrypt it
-    // Return ciphertext and iv
-
         Hackable() {
             _iv = generate_random_bytes();
             _key = generate_random_bytes();
@@ -47,12 +40,6 @@ class Hackable {
 
             return response;
         }
-
-    // Function Two
-    // Accept ciphertext
-    // Decrypt it 
-    // Check padding
-    // return valid padding ? true : false
 
     bool decrypt_string(cipher input) {
         int blocksize = 16;
