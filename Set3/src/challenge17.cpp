@@ -1,4 +1,5 @@
 #include "utility.hpp"
+#include <openssl/evp.h>
 #include <random>
 #include "openssl.hpp"
 #include "encoding.hpp"
@@ -23,6 +24,12 @@ class Hackable {
         }
 
     public:
+    // Function One
+    // Select A String Randomly 
+    // Pad it
+    // Encrypt it
+    // Return ciphertext and iv
+
         Hackable() {
             _iv = generate_random_bytes();
             _key = generate_random_bytes();
@@ -40,26 +47,27 @@ class Hackable {
 
             return response;
         }
+
+    // Function Two
+    // Accept ciphertext
+    // Decrypt it 
+    // Check padding
+    // return valid padding ? true : false
+
+    bool decrypt_string(cipher input) {
+        int blocksize = 16;
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        BYTES plaintext = openssl::decrypt_cbc(ctx, blocksize, input.ciphertext, _key, input.iv);
+        is_valid_pkcs7(plaintext);
+
+        return true;
+    }
 };
-
-// Function One
-// Select A String Randomly 
-// Pad it
-// Encrypt it
-// Return ciphertext and iv
-
-// Function Two
-// Accept ciphertext
-// Decrypt it 
-// Check padding
-// return valid padding ? true : false
 
 int main(void) {
     Hackable server;
     cipher response = server.encrypt_string();
-    std::cout << cp::hex_encode(response.ciphertext) << std::endl;
-    std::cout << '\n';
-    std::cout << cp::hex_encode(response.iv) << std::endl;
+    std::cout << server.decrypt_string(response) << std::endl;
 
     return 0;
 }
