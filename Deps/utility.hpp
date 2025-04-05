@@ -2,6 +2,7 @@
 #define UTILITY_H
 
 // Includes all of header needed for h4ck1ng
+#include <algorithm>
 #include <cstddef>
 #include <sys/types.h>
 #include <vector>
@@ -10,7 +11,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
-#include <map>
 #include <string>
 
 #define BYTES std::vector<uint8_t>
@@ -20,6 +20,8 @@ const std::string read_file(const std::string &file_name);
 const std::vector<std::vector<uint8_t>> read_lines(const std::string filename);
 const std::vector<uint8_t> read_file_bytes(const std::string &file_name);
 std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext);
+void is_valid_pkcs7(BYTES input);
+inline void pkcs7_padding(BYTES &input);
 //-------------------------------------------
 
 // Definitions
@@ -100,6 +102,50 @@ inline std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t
     }
 
     return block_vector;
+
+}
+#ifndef PADDING_ERROR_HPP
+#define PADDING_ERROR_HPP
+
+class PaddingError: public std::exception {
+    private :
+        std::string msg;
+
+    public:
+        explicit PaddingError(const std::string &message) : msg(message) {}
+
+        const char* what() const noexcept override {
+            return msg.c_str();
+        }
+};
+
+#endif // PADDING_ERROR_HPP
+
+inline void is_valid_pkcs7(BYTES input) {
+    if (input.empty()) {
+        throw PaddingError("No Input");
+    }
+
+    char expected_bytes = input.back();
+
+    if (expected_bytes <= 0 || (size_t)expected_bytes > input.size()) {
+        throw PaddingError("Invalid Padding Length");
+    }
+
+    size_t padding_start = input.size() - expected_bytes;
+
+    if (!std::all_of(input.begin() + padding_start, input.end(), [expected_bytes](char c) {return c == expected_bytes;})) {
+        throw PaddingError("Invalid Padding Bytes");
+    }
+
+}
+
+inline void pkcs7_padding(BYTES &input) {
+    int blocksize = 16;
+    int padding = blocksize - (input.size() % blocksize);
+    input.insert(input.end(), padding, padding);
+    
+    return;
 }
 //-------------------------------------------
 

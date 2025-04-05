@@ -1,36 +1,7 @@
 #include "utility.hpp"
 #include <algorithm>
 
-class PaddingError: public std::exception {
-    private :
-        std::string msg;
 
-    public:
-        explicit PaddingError(const std::string &message) : msg(message) {}
-
-        const char* what() const noexcept override {
-            return msg.c_str();
-        }
-};
-
-void is_valid_pkcs7(BYTES input) {
-    if (input.empty()) {
-        throw PaddingError("No Input");
-    }
-
-    char expected_bytes = input.back();
-
-    if (expected_bytes <= 0 || (size_t)expected_bytes > input.size()) {
-        throw PaddingError("Invalid Padding Length");
-    }
-
-    size_t padding_start = input.size() - expected_bytes;
-
-    if (!std::all_of(input.begin() + padding_start, input.end(), [expected_bytes](char c) {return c == expected_bytes;})) {
-        throw PaddingError("Invalid Padding Bytes");
-    }
-
-}
 int main(void) {
     // Test inputs
     std::string input_str1 = "ICE ICE BABY\x04\x04\x04\x04";
