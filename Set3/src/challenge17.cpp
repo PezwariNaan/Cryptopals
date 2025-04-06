@@ -66,10 +66,11 @@ BYTES padding_oracle_attack(cipher response, Hackable server) {
         modified.iv[15] = i;
         modified.ciphertext = block;
         try {
-            bool result = server.decrypt_string(modified);
-            std::cout << i << " " << result << std::endl;
+            server.decrypt_string(modified);;
+            int p1 = (modified.iv[15] ^ 0x01) ^ response.iv[15];
+            std::cout << static_cast<char>(p1) << std::endl;
         } catch (std::exception &e) {
-            std::cout << i << " Invalid Padding\n";
+            // std::cout << i << " Invalid Padding\n";
         }
     }
     
