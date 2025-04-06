@@ -54,26 +54,43 @@ class Hackable {
     }
 };
 
-BYTES padding_oracle_attack(cipher response, Hackable server) {
+BYTES padding_oracle_attack(const cipher response, Hackable server) {
     cipher modified = response;
     BYTES ciphertext = response.ciphertext;
     BYTES plaintext;
 
     // Start with the last block 
     BYTES block(ciphertext.begin(), ciphertext.begin() + 16);
+    modified.ciphertext = block;
 
     for (int i = 0; i < 256; i++) {
         modified.iv[15] = i;
-        modified.ciphertext = block;
         try {
-            server.decrypt_string(modified);;
+            server.decrypt_string(modified);
             int p1 = (modified.iv[15] ^ 0x01) ^ response.iv[15];
-            std::cout << static_cast<char>(p1) << std::endl;
+            plaintext.push_back(p1);
         } catch (std::exception &e) {
             // std::cout << i << " Invalid Padding\n";
         }
     }
+
+    modified.iv[15] = (plaintext[0] ^ response.iv[15]) ^ 0x02;
+
+    for (int i = 0; i < 256; i++) {
+        modified.iv[14] = i;
+        try {
+            server.decrypt_string(modified);
+            int dec_byte = i ^ 0x02;
+            int p2 = dec_byte ^ response.iv[14];
+            plaintext.push_back(p2);
+        } catch (std::exception &e) {
+
+        }
+    }
     
+    print_array(plaintext);
+    std::cout << std::endl;
+
     return plaintext;
 }
 
