@@ -1,7 +1,10 @@
 #include "utility.hpp"
+#include <cstddef>
+#include <exception>
 #include <openssl/evp.h>
 #include <random>
 #include "openssl.hpp"
+#include "encoding.hpp"
 
 struct cipher {
     BYTES ciphertext;
@@ -51,10 +54,33 @@ class Hackable {
     }
 };
 
+BYTES padding_oracle_attack(cipher response, Hackable server) {
+    cipher modified = response;
+    BYTES ciphertext = response.ciphertext;
+    BYTES plaintext;
+
+    // Start with the last block 
+    BYTES block(ciphertext.begin(), ciphertext.begin() + 16);
+
+    for (int i = 0; i < 256; i++) {
+        modified.iv[15] = i;
+        modified.ciphertext = block;
+        try {
+            bool result = server.decrypt_string(modified);
+            std::cout << i << " " << result << std::endl;
+        } catch (std::exception &e) {
+            std::cout << i << " Invalid Padding\n";
+        }
+    }
+    
+    return plaintext;
+}
+
 int main(void) {
     Hackable server;
     cipher response = server.encrypt_string();
-    std::cout << server.decrypt_string(response) << std::endl;
+    
+    padding_oracle_attack(response, server);
 
     return 0;
 }
