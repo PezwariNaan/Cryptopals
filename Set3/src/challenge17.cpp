@@ -1,4 +1,5 @@
 #include "utility.hpp"
+#include <cstdint>
 #include <random>
 #include "openssl.hpp"
 #include "encoding.hpp"
@@ -34,8 +35,13 @@ class Hackable {
             int blocksize = 16;
 
             BYTES random_text = texts[rand() % texts.size()];
-            pkcs7_padding(random_text);
-            response.ciphertext = openssl::encrypt_cbc(ctx, blocksize, random_text, _key, _iv);
+            std::string random_text_str(random_text.begin(), random_text.end());
+            size_t len = random_text_str.length();
+
+            uint8_t *random_text_decoded = cp::base64_decode(random_text_str, len, false);
+            BYTES random_text_vec(random_text_decoded, random_text_decoded + len);
+            pkcs7_padding(random_text_vec);
+            response.ciphertext = openssl::encrypt_cbc(ctx, blocksize, random_text_vec, _key, _iv);
             response.iv = _iv;
 
             return response;
@@ -52,33 +58,33 @@ class Hackable {
 };
 
 BYTES padding_oracle_attack(const cipher response, Hackable server) {
+    int blocksize  = 16;
     cipher modified = response;
     BYTES ciphertext = response.ciphertext;
-    BYTES plaintext;
+    BYTES plaintext(16, 0);
+    BYTES intermediate(16, 0); 
 
-    // Start with the last block 
+    // Start with the first block 
     BYTES block(ciphertext.begin(), ciphertext.begin() + 16);
     modified.ciphertext = block;
 
-    for (int i = 0; i < 256; i++) {
-        modified.iv[15] = i;
-        try {
-            server.decrypt_string(modified);
-            int p1 = (modified.iv[15] ^ 0x01) ^ response.iv[15];
-            plaintext.push_back(p1);
-        } catch (std::exception &e) {}
-    }
+    for (int pos = 15; pos >= 0; pos--) {
+        int pad_value = blocksize - pos;
+        
+        for (int i = 15; i > pos; i--) {
+            modified.iv[i] = intermediate[i] ^ pad_value;
+        }
+        
+        for (int guess = 0; guess < 256; guess++) {
+            modified.iv[pos] = guess;
 
-    modified.iv[15] = (plaintext[0] ^ response.iv[15]) ^ 0x02;
-
-    for (int i = 0; i < 256; i++) {
-        modified.iv[14] = i;
-        try {
-            server.decrypt_string(modified);
-            int dec_byte = i ^ 0x02;
-            int p2 = dec_byte ^ response.iv[14];
-            plaintext.push_back(p2);
-        } catch (std::exception &e) {}
+            try {
+                server.decrypt_string(modified);
+                intermediate[pos] = guess ^ pad_value;
+                plaintext[pos] = intermediate[pos] ^ response.iv[pos];
+                break;
+            } catch (...) {}
+        }
     }
     
     print_array(plaintext);
