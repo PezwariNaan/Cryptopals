@@ -1,7 +1,4 @@
 #include "utility.hpp"
-#include <cstddef>
-#include <exception>
-#include <openssl/evp.h>
 #include <random>
 #include "openssl.hpp"
 #include "encoding.hpp"
@@ -44,14 +41,14 @@ class Hackable {
             return response;
         }
 
-    bool decrypt_string(cipher input) {
-        int blocksize = 16;
-        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-        BYTES plaintext = openssl::decrypt_cbc(ctx, blocksize, input.ciphertext, _key, input.iv);
-        is_valid_pkcs7(plaintext);
+		bool decrypt_string(cipher input) {
+			int blocksize = 16;
+			EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+			BYTES plaintext = openssl::decrypt_cbc(ctx, blocksize, input.ciphertext, _key, input.iv);
+			is_valid_pkcs7(plaintext);
 
-        return true;
-    }
+			return true;
+		}
 };
 
 BYTES padding_oracle_attack(const cipher response, Hackable server) {
@@ -69,9 +66,7 @@ BYTES padding_oracle_attack(const cipher response, Hackable server) {
             server.decrypt_string(modified);
             int p1 = (modified.iv[15] ^ 0x01) ^ response.iv[15];
             plaintext.push_back(p1);
-        } catch (std::exception &e) {
-            // std::cout << i << " Invalid Padding\n";
-        }
+        } catch (std::exception &e) {}
     }
 
     modified.iv[15] = (plaintext[0] ^ response.iv[15]) ^ 0x02;
@@ -83,9 +78,7 @@ BYTES padding_oracle_attack(const cipher response, Hackable server) {
             int dec_byte = i ^ 0x02;
             int p2 = dec_byte ^ response.iv[14];
             plaintext.push_back(p2);
-        } catch (std::exception &e) {
-
-        }
+        } catch (std::exception &e) {}
     }
     
     print_array(plaintext);
