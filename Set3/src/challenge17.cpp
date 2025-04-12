@@ -30,11 +30,12 @@ class Hackable {
         }
 
         cipher encrypt_string(void) {
+            std::random_device rd;
             cipher response;
             EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();\
             int blocksize = 16;
 
-            BYTES random_text = texts[rand() % texts.size()];
+            BYTES random_text = texts[rd() % texts.size()];
             std::string random_text_str(random_text.begin(), random_text.end());
             size_t len = random_text_str.length();
 
@@ -58,35 +59,45 @@ class Hackable {
 };
 
 BYTES padding_oracle_attack(const cipher response, Hackable server) {
-    int blocksize  = 16;
+    int blocksize  = 16; 
     cipher modified = response;
     BYTES ciphertext = response.ciphertext;
-    BYTES plaintext(16, 0);
-    BYTES intermediate(16, 0); 
+    BYTES plaintext;
 
     // Start with the first block 
-    BYTES block(ciphertext.begin(), ciphertext.begin() + 16);
-    modified.ciphertext = block;
+    for (size_t i = 0; i < ciphertext.size(); i += 16) {
+        BYTES block(ciphertext.begin() + i, ciphertext.begin() + blocksize + i);
+        BYTES previous_block = (i == 0)
+            ? response.iv
+            : BYTES(ciphertext.begin() + i - blocksize, ciphertext.begin() + i);
 
-    for (int pos = 15; pos >= 0; pos--) {
-        int pad_value = blocksize - pos;
+        modified.ciphertext = block;
+        modified.iv = previous_block;
         
-        for (int i = 15; i > pos; i--) {
-            modified.iv[i] = intermediate[i] ^ pad_value;
-        }
-        
-        for (int guess = 0; guess < 256; guess++) {
-            modified.iv[pos] = guess;
+        BYTES block_plaintext(16, 0);
+        BYTES intermediate(16, 0); 
 
-            try {
-                server.decrypt_string(modified);
-                intermediate[pos] = guess ^ pad_value;
-                plaintext[pos] = intermediate[pos] ^ response.iv[pos];
-                break;
-            } catch (...) {}
+        for (int pos = 15; pos >= 0; pos--) {
+            int pad_value = blocksize - pos;
+            
+            for (int i = 15; i > pos; i--) {
+                modified.iv[i] = intermediate[i] ^ pad_value;
+            }
+            
+            for (int guess = 0; guess < 256; guess++) {
+                modified.iv[pos] = guess;
+
+                try {
+                    server.decrypt_string(modified);
+                    intermediate[pos] = guess ^ pad_value;
+                    block_plaintext[pos] = intermediate[pos] ^ previous_block[pos];
+                    break;
+                } catch (...) {}
+            }
         }
+
+        plaintext.insert(plaintext.end(), block_plaintext.begin(), block_plaintext.end());
     }
-    
     print_array(plaintext);
     std::cout << std::endl;
 
