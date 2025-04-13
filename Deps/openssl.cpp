@@ -1,6 +1,9 @@
 #include "utility.hpp"
 #include "openssl.hpp"
 #include "encrypting.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <string.h>
 
 std::vector<uint8_t> openssl::encrypt_ecb(EVP_CIPHER_CTX *ctx, const std::vector<uint8_t> plaintext, const std::vector<uint8_t> &key) {
     if (EVP_EncryptInit(ctx, EVP_aes_128_ecb(), key.data(), NULL) != 1)
@@ -117,4 +120,28 @@ std::vector<uint8_t> openssl::decrypt_cbc(EVP_CIPHER_CTX *ctx, int blocksize,con
     EVP_CIPHER_CTX_reset(ctx);
 
     return decrypted_text;
+}
+
+std::vector<uint8_t> openssl::aes_ctr(EVP_CIPHER_CTX *ctx, const BYTES input, const BYTES key, long nonce, size_t blocksize) {
+    BYTES plaintext;    
+
+    size_t num_blocks = (input.size() + blocksize - 1) / blocksize;
+
+    for (size_t i = 0; i < num_blocks; i++) {
+        BYTES counter_block(blocksize, 0);
+        memcpy(&counter_block[0], &nonce, 8);
+        uint64_t counter = i;
+        memcpy(&counter_block[8], &counter, 8);
+
+        BYTES keystream = openssl::encrypt_ecb(ctx, counter_block, key);
+        size_t offset = i * blocksize;
+        size_t len = std::min(blocksize, input.size() - offset);
+        BYTES cipher_block(input.begin() + offset, input.begin() + offset + len);
+        
+        for (size_t j = 0; j < len; j++) {
+            plaintext.push_back(cipher_block[j] ^ keystream[j]);
+        }
+    }
+
+    return plaintext;
 }
