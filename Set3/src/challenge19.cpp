@@ -17,10 +17,6 @@ BYTES generate_key(void) {
     return key;
 }
 
-uint8_t keystream_guess(uint8_t plaintext_guess, uint8_t ciphertext_byte) {
-    return plaintext_guess ^ ciphertext_byte;
-}
-
 int main(void) {
     // Variables
     std::vector<BYTES> lines = read_lines("Texts/challenge19.txt");
@@ -39,7 +35,7 @@ int main(void) {
         uint8_t *decoded_ptr = cp::base64_decode(lines_str, len, false);
         BYTES decoded(decoded_ptr, decoded_ptr + len);
         BYTES encrypted = openssl::aes_ctr(ctx, decoded, key, nonce, blocksize);
-        decoded_lines.push_back(decoded);
+        decoded_lines.push_back(encrypted);
     }
 
     while (running) {
@@ -56,10 +52,10 @@ int main(void) {
         BYTES guess(input_line.begin(), input_line.end());
         
         for (size_t i = 0; i < decoded_lines.size(); i++) {
-            for (size_t j = 0; j < decoded_lines.size(); j++) {
+            for (size_t j = 0; j < decoded_lines[i].size(); j++) {
                 if (j < guess.size()) {
-                    uint8_t decrypted = keystream_guess(guess[j], decoded_lines[i][j]);
-                    std::cout << (std::isprint(decrypted) ? (char)decrypted : '.');
+                    uint8_t keystream_guess = guess[j] ^ decoded_lines[i][j];
+                    std::cout << (std::isprint(keystream_guess) ? (char)keystream_guess : '.');
                 } else {
                     std::cout << '?';
                 }
