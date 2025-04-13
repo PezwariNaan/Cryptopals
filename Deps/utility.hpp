@@ -12,6 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <random>
 
 #define BYTES std::vector<uint8_t>
 // Declarations
