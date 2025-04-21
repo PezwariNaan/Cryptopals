@@ -25,23 +25,32 @@ BYTES concat_texts(unsigned int len, std::vector<BYTES> ciphertexts) {
     return concated_texts;
 }
 
-BYTES get_keystream(unsigned int len, BYTES concated_text) {
+BYTES get_keystream(unsigned int len, BYTES &concated_text) {
     BYTES keystream;
-    for (int i = 0; i < len; i++) {
-        unsigned int high_score = 0;
-        uint8_t best_guess;
-        for (size_t j = 0; j < concated_text.size(); j += len) {
-            unsigned int score = 0;
-            for (int k = 0; k < 256; k++) {
-                uint8_t guess = concated_text[j] ^ k;
-                if (isalpha(guess)) score++;
-                if ( score > high_score) {
-                    high_score = score;
-                    best_guess = k;
-                }
+
+    for (unsigned int i = 0; i < len; i++) {
+        int best_score = INT_MIN;
+        uint8_t best_k = 0;
+
+        for (int k = 0; k < 256; k++) {
+            int total_score = 0;
+
+            for (size_t base = 0; base + i < concated_text.size(); base += len) {
+                uint8_t pt_guess = concated_text[base + i] ^ (uint8_t)k;
+
+                if (isalpha(pt_guess)) total_score += 2;
+                else if (pt_guess == ' ') total_score += 1;
+                else if (isprint(pt_guess)) total_score += 0;
+                else total_score -= 1;
+            }
+
+            if (total_score > best_score) {
+                best_score = total_score;
+                best_k = k;
             }
         }
-        keystream.push_back(best_guess);
+
+        keystream.push_back(best_k);
     }
     return keystream;
 }
@@ -64,7 +73,7 @@ int main(void) {
         encrypted_lines.push_back(encrypted);
     }
 
-    unsigned int shortest_len = INT_MAX;
+    size_t shortest_len = INT_MAX;
     for (auto i : encrypted_lines) {
         shortest_len = i.size() < shortest_len ? i.size() : shortest_len;
     }
@@ -74,10 +83,13 @@ int main(void) {
     
     BYTES keystream = get_keystream(shortest_len, concated_text);
 
-    for (size_t i = 0; i < encrypted_lines[0].size(); i++) {
-        std::cout << static_cast<char>((encrypted_lines[0][i] ^ keystream[i]));
+    for (auto i : encrypted_lines) {
+        for (size_t j = 0; j < shortest_len; j++) {
+            std::cout << static_cast<char>((i[j] ^ keystream[j]));
+
+        }
+        std::cout << '\n';
     }
-    std::cout << '\n';
 
     return 0;
 }
