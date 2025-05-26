@@ -12,7 +12,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <random>
 
 #define BYTES std::vector<uint8_t>
 // Declarations
@@ -23,6 +22,75 @@ const std::vector<uint8_t> read_file_bytes(const std::string &file_name);
 std::vector<std::vector<uint8_t>> create_blocks(const std::vector<uint8_t> plaintext);
 void is_valid_pkcs7(BYTES input);
 inline void pkcs7_padding(BYTES &input);
+namespace cp {
+    class MT19937 {
+        private:
+            static constexpr int n = 624; 
+            static constexpr int m = 397; // Middle Word
+            static constexpr int w = 32;  // Word Length
+            static constexpr int r = 31;  // Left shift
+            static constexpr unsigned long a  = 0x9908b0dfUL; // Twist Coefficient 
+            static constexpr uint32_t u  = 11;                // Tempering Bit Shift
+            static constexpr uint32_t s  = 7;                 // Tempering Bit Shift 
+            static constexpr int t = 15;                      // Tempering Bit Shift
+            static constexpr int l = 18;                      // Tempering Bit Shift
+            static constexpr int b = 0x9d2c5680UL;            // Tempering Bit Mask
+            static constexpr int c = 0xefc60000UL;            // Tempering Bit Mask
+            static constexpr unsigned long f = 1812433253UL;  // Initialisation Value
+
+            static constexpr unsigned long UMASK = (0xffffffffUL << r);       // Upper Bit Mask
+            static constexpr uint32_t LMASK = (0xffffffffUL >> (w - r)); // Lower Bit Mask 
+
+            uint32_t state_array[n];
+            int state_index = n + 1;
+            
+            void initalise( uint32_t seed);
+
+            void twist();
+        
+        public:
+            MT19937(uint32_t seed = 1234U);
+
+            uint32_t operator() ();
+    };
+    
+    inline void MT19937::initalise( uint32_t seed) {
+        state_array[0] = seed;
+
+        for (int i = 1; i < n; ++i) {
+            seed = f * (seed ^ (seed >> (w - 2))) + i;
+            state_array[i] = seed;
+        }
+        state_index = 0;
+    }
+
+    inline void MT19937::twist() {
+        for (int i = 0; i < n; ++i) {
+            int j = (i + 1) % n;
+            uint32_t x = (state_array[i] & UMASK )| (state_array[j] & LMASK);
+            uint32_t xA = x >> 1;
+            if (x & 0x1) xA ^= a;
+            int k = (i + m) % n;
+            state_array[i] = state_array[k] ^ xA;
+        }
+        state_index = 0;
+    }
+
+    inline MT19937::MT19937(uint32_t seed) {
+        initalise(seed);
+    }
+
+    inline uint32_t MT19937::operator() () {
+        if (state_index >= n) twist();
+
+        uint32_t x = state_array[state_index++];
+        x ^= (x >> u);
+        x ^= (x << s) & b;
+        x ^= (x << t) & c;
+        x ^= (x >> l);
+        return x;
+    }
+}
 //-------------------------------------------
 
 // Definitions

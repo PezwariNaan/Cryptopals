@@ -15,7 +15,6 @@ namespace openssl {
     std::vector<uint8_t> decrypt_cbc(EVP_CIPHER_CTX *ctx, int blocksize,const std::vector<uint8_t> ciphertext, const std::vector<uint8_t> &key, const std::vector<uint8_t> iv);
 
     std::vector<uint8_t> aes_ctr(EVP_CIPHER_CTX *ctx, const BYTES input, const BYTES key, long nonce, size_t blocksize);
-
 }
 
 #endif // OPENSSL_H
