@@ -47,7 +47,9 @@ int main(void) {
     std::time_t seed = guess_seed(random_number.result);
 
     assert(seed == random_number.seed);
-    std::cout << "Seed: " << seed << std::endl;
+
+    std::cout << "Guess: " << seed << std::endl;
+	std::cout << "Seed: " << random_number.seed << std::endl;
 
     return 0;
 }
