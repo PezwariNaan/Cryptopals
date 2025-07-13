@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <utility.hpp>
+#include <vector>
 
 
 // **************
@@ -50,38 +51,30 @@ uint32_t untemper(uint32_t y) {
     uint32_t x;
 
     x = unshift_right_xor(y, l);
-    std::cout << x << '\n';
     x = unshift_left_xor_mask(x, t, c);
-    std::cout << x << '\n';
     x = unshift_left_xor_mask(x, s, b);
-    std::cout << x << '\n';
     x = unshift_right_xor(x, u);
-    std::cout << x << '\n';
 
     return x;
 }
 
-uint32_t temper(uint32_t x) {
-    x ^= (x >> u);
-    x ^= (x << s) & b;
-    x ^= (x << t) & c;
-    x ^= (x >> l);
-
-    return x; 
-}
-
 int main(void) {
-    // Get 624 Outputs
-    // cp::MT19937 rng(456);
-    // for (int i = 1; i < 625; i++) {
-    //     uint32_t tempered = rng();
-    //     std::cout << tempered << " : " << untemper(tempered) << std::endl;
-    // }
+    //Get 624 Outputs
+    cp::MT19937 rng(456);
+    std::vector<uint32_t> outputs;
 
-    uint32_t x = temper(23423432);
-    uint32_t y = untemper(x);
+    for (int i = 1; i < 625; i++) {
+        uint32_t tempered = rng();
+        outputs.push_back(untemper(tempered));
+    }
 
-    std::cout << x << " : " << y << std::endl;
+    cp::MT19937 clone(345353453);
+    clone.set_state(outputs);
+
+    for (int i = 0; i < 1000; i++) {
+        std::cout<< rng() << " : " << clone() << "\n";
+    }
+
 
     return 0;
 }

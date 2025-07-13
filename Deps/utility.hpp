@@ -38,7 +38,7 @@ namespace cp {
             static constexpr int c = 0xefc60000UL;            // Tempering Bit Mask
             static constexpr unsigned long f = 1812433253UL;  // Initialisation Value
 
-            static constexpr unsigned long UMASK = (0xffffffffUL << r);       // Upper Bit Mask
+            static constexpr unsigned long UMASK = (0xffffffffUL << r);  // Upper Bit Mask
             static constexpr uint32_t LMASK = (0xffffffffUL >> (w - r)); // Lower Bit Mask 
 
             uint32_t state_array[n];
@@ -49,7 +49,8 @@ namespace cp {
             void twist();
         
         public:
-            MT19937(uint32_t seed = 1234U);
+            MT19937(uint32_t seed);
+            void set_state(std::vector<uint32_t> &state);
 
             uint32_t operator() ();
     };
@@ -74,6 +75,14 @@ namespace cp {
             state_array[i] = state_array[k] ^ xA;
         }
         state_index = 0;
+    }
+
+    inline void MT19937::set_state(std::vector<uint32_t> &state) {
+        for (int i = 0; i < 624; i++) {
+            state_array[i] = state[i];
+        }
+
+        state_index = 624;
     }
 
     inline MT19937::MT19937(uint32_t seed) {
