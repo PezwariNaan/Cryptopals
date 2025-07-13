@@ -13,8 +13,8 @@ namespace cp {
         static constexpr uint32_t s  = 7;                 // Tempering Bit Shift 
         static constexpr int t = 15;                      // Tempering Bit Shift
         static constexpr int l = 18;                      // Tempering Bit Shift
-        static constexpr int b = 0x9d2c5680UL;            // Tempering Bit Mask
-        static constexpr int c = 0xefc60000UL;            // Tempering Bit Mask
+        static constexpr uint32_t b = 0x9d2c5680UL;            // Tempering Bit Mask
+        static constexpr uint32_t c = 0xefc60000UL;            // Tempering Bit Mask
         static constexpr unsigned long f = 1812433253UL;  // Initialisation Value
 
         static constexpr unsigned long UMASK = (0xffffffffUL << r);       // Upper Bit Mask
@@ -47,7 +47,7 @@ namespace cp {
         }
     
     public:
-        MT19937(uint32_t seed = 1234U) {
+        MT19937(uint32_t seed) {
             initalise(seed);
         }
 
