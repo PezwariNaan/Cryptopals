@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <utility.hpp>
 #include <vector>
 
@@ -74,7 +73,6 @@ int main(void) {
     for (int i = 0; i < 1000; i++) {
         std::cout<< rng() << " : " << clone() << "\n";
     }
-
 
     return 0;
 }
